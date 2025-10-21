@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    <div class="max-w-6xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-t-xl shadow-lg border-b border-gray-200">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 rounded-t-xl">
+                <div class="text-center">
+                    <h1 class="text-4xl font-bold mb-2">Quote Tool</h1>
+                    <p class="text-blue-100 text-lg">Create professional quotes with ease</p>
+                </div>
+            </div>
+        </div>
+
+        <form id="quoteForm" class="bg-white rounded-b-xl shadow-lg overflow-hidden">
+            <!-- Customer Information Section -->
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center mb-6">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Customer Information</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                        <input type="text" id="firstName" name="firstName" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                        <input type="text" id="lastName" name="lastName" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="companyName" class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                        <input type="text" id="companyName" name="companyName" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <input type="email" id="email" name="email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                    <input type="tel" id="phone" name="phone" required 
+                           class="w-full md:w-1/2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+
+                <div class="mt-6">
+                    <label for="address1" class="block text-sm font-medium text-gray-700 mb-2">Address Line 1 *</label>
+                    <input type="text" id="address1" name="address1" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+
+                <div class="mt-6">
+                    <label for="address2" class="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
+                    <input type="text" id="address2" name="address2" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                        <input type="text" id="city" name="city" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="state" class="block text-sm font-medium text-gray-700 mb-2">State *</label>
+                        <input type="text" id="state" name="state" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="zip" class="block text-sm font-medium text-gray-700 mb-2">ZIP Code *</label>
+                        <input type="text" id="zip" name="zip" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Details Section -->
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center mb-6">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Service Details</h2>
+                </div>
+                
+                <div id="serviceRows">
+                    <div class="service-row bg-gray-50 rounded-lg p-6 mb-4" data-row="0">
+                        <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 items-end">
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Service Name *</label>
+                                <div class="relative">
+                                    <input type="text" name="productName0" id="serviceInput0" required 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                           autocomplete="off" placeholder="Type to search services...">
+                                    <div id="serviceDropdown0" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                                        <div class="p-2">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="219">
+                                                <div class="font-medium">Catch-up Bookkeeping</div>
+                                                <div class="text-sm text-gray-500">$219</div>
+                                            </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="799">
+                                                <div class="font-medium">Tax Return (LLC)</div>
+                                                <div class="text-sm text-gray-500">$799</div>
+                                            </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="799">
+                                                <div class="font-medium">Tax Return (S-Corp)</div>
+                                                <div class="text-sm text-gray-500">$799</div>
+                                            </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="">
+                                                <div class="font-medium">Monthly Bookkeeping Subscription</div>
+                                                <div class="text-sm text-gray-500">Custom pricing</div>
+                                            </div>
+                                            <div class="border-t border-gray-200 mt-2 pt-2">
+                                                <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
+                                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                    </svg>
+                                                    Add "<span class="add-service-text"></span>" as new service
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                                <input type="number" name="quantity0" min="1" step="1" required onchange="calculateSubtotal(0)"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                            </div>
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <textarea name="description0" rows="2" 
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
+                                <input type="number" name="unitCost0" min="0" step="0.01" required onchange="calculateSubtotal(0)"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 mt-4 items-end">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
+                                <input type="text" name="subtotal0" readonly 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold">
+                            </div>
+                            <div class="lg:col-span-5">
+                                <button type="button" class="remove-row-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium" 
+                                        onclick="removeRow(0)" style="display: none;">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="add-row-btn bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium flex items-center mx-auto" 
+                        onclick="addServiceRow()">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Another Service
+                </button>
+            </div>
+
+            <!-- Total Section -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 border-b border-gray-200">
+                <div class="text-right">
+                    <div class="text-3xl font-bold text-gray-800">
+                        Total: $<span id="grandTotal" class="text-blue-600">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Build Link Section -->
+            <div class="p-8 bg-gray-50">
+                <div class="text-center">
+                    <button type="button" class="build-link-btn bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1" 
+                            onclick="buildLink()">
+                        <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        Build Link
+                    </button>
+                    <div id="generatedUrl" class="generated-url bg-white border-2 border-gray-300 rounded-lg p-4 mt-6 text-left break-all font-mono text-sm hidden"></div>
+                    <button type="button" class="copy-btn bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium mt-4 hidden" 
+                            onclick="copyToClipboard()">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        Copy Link
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let rowCount = 1;
+
+        function addServiceRow() {
+            const serviceRows = document.getElementById('serviceRows');
+            const newRow = document.createElement('div');
+            newRow.className = 'service-row bg-gray-50 rounded-lg p-6 mb-4';
+            newRow.setAttribute('data-row', rowCount);
+            
+            newRow.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 items-end">
+                    <div class="lg:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Service Name *</label>
+                        <div class="relative">
+                            <input type="text" name="productName${rowCount}" id="serviceInput${rowCount}" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                   autocomplete="off" placeholder="Type to search services...">
+                            <div id="serviceDropdown${rowCount}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                                <div class="p-2">
+                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="219">
+                                        <div class="font-medium">Catch-up Bookkeeping</div>
+                                        <div class="text-sm text-gray-500">$219</div>
+                                    </div>
+                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="799">
+                                        <div class="font-medium">Tax Return (LLC)</div>
+                                        <div class="text-sm text-gray-500">$799</div>
+                                    </div>
+                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="799">
+                                        <div class="font-medium">Tax Return (S-Corp)</div>
+                                        <div class="text-sm text-gray-500">$799</div>
+                                    </div>
+                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="">
+                                        <div class="font-medium">Monthly Bookkeeping Subscription</div>
+                                        <div class="text-sm text-gray-500">Custom pricing</div>
+                                    </div>
+                                    <div class="border-t border-gray-200 mt-2 pt-2">
+                                        <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
+                                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                            </svg>
+                                            Add "<span class="add-service-text"></span>" as new service
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                        <input type="number" name="quantity${rowCount}" min="1" step="1" required onchange="calculateSubtotal(${rowCount})"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea name="description${rowCount}" rows="2" 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
+                        <input type="number" name="unitCost${rowCount}" min="0" step="0.01" required onchange="calculateSubtotal(${rowCount})"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 mt-4 items-end">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
+                        <input type="text" name="subtotal${rowCount}" readonly 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold">
+                    </div>
+                    <div class="lg:col-span-5">
+                        <button type="button" class="remove-row-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium" 
+                                onclick="removeRow(${rowCount})">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            serviceRows.appendChild(newRow);
+            rowCount++;
+            
+            // Show remove buttons for all rows if there's more than one
+            updateRemoveButtons();
+            
+            // Initialize dropdown functionality for the new row
+            initializeServiceDropdown(rowCount - 1);
+        }
+
+        function removeRow(rowIndex) {
+            const row = document.querySelector(`[data-row="${rowIndex}"]`);
+            if (row) {
+                row.remove();
+                updateRemoveButtons();
+                calculateGrandTotal();
+            }
+        }
+
+        function updateRemoveButtons() {
+            const rows = document.querySelectorAll('.service-row');
+            rows.forEach((row, index) => {
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (rows.length > 1) {
+                    removeBtn.style.display = 'block';
+                } else {
+                    removeBtn.style.display = 'none';
+                }
+            });
+        }
+
+        function calculateSubtotal(rowIndex) {
+            const quantity = parseFloat(document.querySelector(`[name="quantity${rowIndex}"]`).value) || 0;
+            const unitCost = parseFloat(document.querySelector(`[name="unitCost${rowIndex}"]`).value) || 0;
+            const subtotal = quantity * unitCost;
+            
+            document.querySelector(`[name="subtotal${rowIndex}"]`).value = subtotal.toFixed(2);
+            calculateGrandTotal();
+        }
+
+        function calculateGrandTotal() {
+            let total = 0;
+            const subtotalInputs = document.querySelectorAll('input[name^="subtotal"]');
+            
+            subtotalInputs.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            document.getElementById('grandTotal').textContent = total.toFixed(2);
+        }
+
+        function buildLink() {
+            const form = document.getElementById('quoteForm');
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+            
+            // Add customer information
+            const customerFields = ['firstName', 'lastName', 'companyName', 'email', 'phone', 'address1', 'address2', 'city', 'state', 'zip'];
+            customerFields.forEach(field => {
+                const value = formData.get(field);
+                if (value) {
+                    params.append(field, value);
+                }
+            });
+            
+            // Add service details
+            const rows = document.querySelectorAll('.service-row');
+            rows.forEach((row, index) => {
+                const rowData = row.querySelectorAll('input, textarea');
+                rowData.forEach(input => {
+                    if (input.value) {
+                        params.append(input.name, input.value);
+                    }
+                });
+            });
+            
+            // Generate the URL
+            const baseUrl = window.location.origin + window.location.pathname.replace('quote-tool.html', 'payment-form.html');
+            const fullUrl = baseUrl + '?' + params.toString();
+            
+            // Display the URL
+            const urlDiv = document.getElementById('generatedUrl');
+            urlDiv.textContent = fullUrl;
+            urlDiv.classList.remove('hidden');
+            
+            // Show copy button
+            document.querySelector('.copy-btn').classList.remove('hidden');
+        }
+
+        function copyToClipboard() {
+            const urlDiv = document.getElementById('generatedUrl');
+            const url = urlDiv.textContent;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                const copyBtn = document.querySelector('.copy-btn');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                copyBtn.className = 'copy-btn bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium mt-4';
+                
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.className = 'copy-btn bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium mt-4';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Service dropdown functionality
+        function initializeServiceDropdown(rowIndex) {
+            const input = document.getElementById(`serviceInput${rowIndex}`);
+            const dropdown = document.getElementById(`serviceDropdown${rowIndex}`);
+            const addServiceText = dropdown.querySelector('.add-service-text');
+            
+            if (!input || !dropdown) return;
+            
+            // Show dropdown on focus
+            input.addEventListener('focus', function() {
+                dropdown.classList.remove('hidden');
+                filterServices(rowIndex);
+            });
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+            
+            // Filter services as user types
+            input.addEventListener('input', function() {
+                filterServices(rowIndex);
+            });
+            
+            // Handle service option clicks
+            dropdown.addEventListener('click', function(e) {
+                if (e.target.closest('.service-option')) {
+                    const serviceOption = e.target.closest('.service-option');
+                    const value = serviceOption.getAttribute('data-value');
+                    const price = serviceOption.getAttribute('data-price');
+                    
+                    input.value = value;
+                    dropdown.classList.add('hidden');
+                    
+                    // Auto-populate unit cost if price is available
+                    if (price) {
+                        const unitCostInput = input.closest('.service-row').querySelector('input[name^="unitCost"]');
+                        if (unitCostInput) {
+                            unitCostInput.value = price;
+                            // Trigger calculation
+                            const rowIndex = input.id.replace('serviceInput', '');
+                            calculateSubtotal(rowIndex);
+                        }
+                    }
+                } else if (e.target.closest('.add-service-option')) {
+                    const customValue = input.value.trim();
+                    if (customValue) {
+                        input.value = customValue;
+                        dropdown.classList.add('hidden');
+                    }
+                }
+            });
+        }
+        
+        function filterServices(rowIndex) {
+            const input = document.getElementById(`serviceInput${rowIndex}`);
+            const dropdown = document.getElementById(`serviceDropdown${rowIndex}`);
+            const addServiceText = dropdown.querySelector('.add-service-text');
+            const addServiceOption = dropdown.querySelector('.add-service-option');
+            
+            if (!input || !dropdown) return;
+            
+            const searchTerm = input.value.toLowerCase();
+            const serviceOptions = dropdown.querySelectorAll('.service-option');
+            let hasMatches = false;
+            
+            // Filter existing services
+            serviceOptions.forEach(option => {
+                const serviceNameElement = option.querySelector('.font-medium');
+                const serviceName = serviceNameElement ? serviceNameElement.textContent.toLowerCase() : option.textContent.toLowerCase();
+                if (serviceName.includes(searchTerm)) {
+                    option.style.display = 'block';
+                    hasMatches = true;
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+            
+            // Show/hide add new service option
+            if (searchTerm && !hasMatches) {
+                addServiceText.textContent = input.value;
+                addServiceOption.style.display = 'block';
+            } else {
+                addServiceOption.style.display = 'none';
+            }
+        }
+        
+        // Initialize dropdown for the first row
+        function initializeAllDropdowns() {
+            const rows = document.querySelectorAll('.service-row');
+            rows.forEach((row, index) => {
+                initializeServiceDropdown(index);
+            });
+        }
+
+        // Load data from URL parameters on page load
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.toString()) {
+                // Populate customer information
+                const customerFields = ['firstName', 'lastName', 'companyName', 'email', 'phone', 'address1', 'address2', 'city', 'state', 'zip'];
+                customerFields.forEach(field => {
+                    const value = urlParams.get(field);
+                    if (value) {
+                        document.getElementById(field).value = value;
+                    }
+                });
+                
+                // Populate service details
+                let serviceIndex = 0;
+                while (urlParams.has(`productName${serviceIndex}`)) {
+                    if (serviceIndex > 0) {
+                        addServiceRow();
+                    }
+                    
+                    const serviceFields = ['productName', 'quantity', 'description', 'unitCost', 'subtotal'];
+                    serviceFields.forEach(field => {
+                        const value = urlParams.get(`${field}${serviceIndex}`);
+                        if (value) {
+                            const input = document.querySelector(`[name="${field}${serviceIndex}"]`);
+                            if (input) {
+                                input.value = value;
+                            }
+                        }
+                    });
+                    
+                    serviceIndex++;
+                }
+                
+                // Calculate totals
+                calculateGrandTotal();
+            }
+            
+            // Initialize all service dropdowns
+            initializeAllDropdowns();
+        });
+    </script>
+</body>
+</html>

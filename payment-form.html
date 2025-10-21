@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Form - Quote Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-t-xl shadow-lg border-b border-gray-200">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-700 text-white p-8 rounded-t-xl">
+                <div class="text-center">
+                    <h1 class="text-4xl font-bold mb-2">Payment Form</h1>
+                    <p class="text-green-100 text-lg">Complete your quote payment</p>
+                </div>
+            </div>
+        </div>
+
+        <form id="paymentForm" class="bg-white rounded-b-xl shadow-lg overflow-hidden" method="POST" action="https://secure.authorize.net/gateway/transact.dll">
+            <!-- Quote Summary Section -->
+            <div class="p-8 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center mb-6">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Quote Summary</h2>
+                </div>
+                
+                <div id="quoteSummary" class="space-y-4">
+                    <!-- Quote details will be populated here -->
+                </div>
+                
+                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-gray-800">
+                            Total: $<span id="totalAmount">0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Debug: Show line items being sent to Authorize.net -->
+                <div id="debugLineItems" class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200" style="display: none;">
+                    <h4 class="font-semibold text-yellow-800 mb-2">Debug: Line Items for Authorize.net</h4>
+                    <div id="lineItemsDebug" class="text-sm text-yellow-700 font-mono"></div>
+                </div>
+            </div>
+
+            <!-- Customer Information Section -->
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center mb-6">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Customer Information</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                        <input type="text" id="firstName" name="x_first_name" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                        <input type="text" id="lastName" name="x_last_name" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="company" class="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                        <input type="text" id="company" name="x_company" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <input type="email" id="email" name="x_email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                    <input type="tel" id="phone" name="x_phone" required 
+                           class="w-full md:w-1/2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+
+                <div class="mt-6">
+                    <label for="address" class="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                    <input type="text" id="address" name="x_address" required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                        <input type="text" id="city" name="x_city" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="state" class="block text-sm font-medium text-gray-700 mb-2">State *</label>
+                        <input type="text" id="state" name="x_state" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label for="zip" class="block text-sm font-medium text-gray-700 mb-2">ZIP Code *</label>
+                        <input type="text" id="zip" name="x_zip" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Information Section -->
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center mb-6">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Payment Information</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="cardNumber" class="block text-sm font-medium text-gray-700 mb-2">Card Number *</label>
+                        <input type="text" id="cardNumber" name="x_card_num" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="1234 5678 9012 3456" maxlength="19">
+                    </div>
+                    <div>
+                        <label for="cardCode" class="block text-sm font-medium text-gray-700 mb-2">CVV *</label>
+                        <input type="text" id="cardCode" name="x_card_code" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="123" maxlength="4">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="expDate" class="block text-sm font-medium text-gray-700 mb-2">Expiration Date *</label>
+                        <input type="text" id="expDate" name="x_exp_date" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="MM/YY" maxlength="5">
+                    </div>
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                        <input type="text" id="amount" name="x_amount" required readonly
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden Authorize.net Fields -->
+            <input type="hidden" name="x_login" value="YOUR_API_LOGIN_ID">
+            <input type="hidden" name="x_tran_key" value="YOUR_TRANSACTION_KEY">
+            <input type="hidden" name="x_version" value="3.1">
+            <input type="hidden" name="x_type" value="AUTH_CAPTURE">
+            <input type="hidden" name="x_method" value="CC">
+            <input type="hidden" name="x_currency_code" value="USD">
+            <input type="hidden" name="x_description" value="Quote Payment">
+            <input type="hidden" name="x_invoice_num" id="invoiceNum">
+            <input type="hidden" name="x_customer_ip" id="customerIp">
+            
+            <!-- Dynamic Line Items Container -->
+            <div id="lineItemsContainer">
+                <!-- Line items will be dynamically generated here -->
+            </div>
+
+            <!-- Submit Section -->
+            <div class="p-8 bg-gray-50">
+                <div class="text-center">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                        <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                        Process Payment
+                    </button>
+                    <p class="text-sm text-gray-500 mt-4">
+                        Secure payment processing by Authorize.net
+                    </p>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Load data from URL parameters on page load
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.toString()) {
+                populateFormFromURL(urlParams);
+            }
+            
+            // Generate invoice number
+            generateInvoiceNumber();
+            
+            // Set customer IP (you might want to get this from server-side)
+            document.getElementById('customerIp').value = '127.0.0.1';
+        });
+
+        function populateFormFromURL(urlParams) {
+            // Populate customer information
+            const customerFields = {
+                'firstName': 'firstName',
+                'lastName': 'lastName', 
+                'companyName': 'company',
+                'email': 'email',
+                'phone': 'phone',
+                'address1': 'address',
+                'city': 'city',
+                'state': 'state',
+                'zip': 'zip'
+            };
+            
+            Object.entries(customerFields).forEach(([urlKey, formKey]) => {
+                const value = urlParams.get(urlKey);
+                if (value) {
+                    const input = document.getElementById(formKey);
+                    if (input) {
+                        input.value = value;
+                    }
+                }
+            });
+            
+            // Populate quote summary and calculate total
+            populateQuoteSummary(urlParams);
+        }
+
+        function populateQuoteSummary(urlParams) {
+            const quoteSummary = document.getElementById('quoteSummary');
+            const totalAmount = document.getElementById('totalAmount');
+            const amountInput = document.getElementById('amount');
+            const lineItemsContainer = document.getElementById('lineItemsContainer');
+            
+            let total = 0;
+            let serviceIndex = 0;
+            let summaryHTML = '';
+            let lineItemHTML = '';
+            
+            // Process each service
+            while (urlParams.has(`productName${serviceIndex}`)) {
+                const serviceName = urlParams.get(`productName${serviceIndex}`);
+                const quantity = urlParams.get(`quantity${serviceIndex}`) || '1';
+                const description = urlParams.get(`description${serviceIndex}`) || '';
+                const unitCost = urlParams.get(`unitCost${serviceIndex}`) || '0';
+                const subtotal = urlParams.get(`subtotal${serviceIndex}`) || '0';
+                
+                const subtotalNum = parseFloat(subtotal);
+                total += subtotalNum;
+                
+                // Generate summary HTML
+                summaryHTML += `
+                    <div class="flex justify-between items-center p-3 bg-white rounded-lg border">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800">${serviceName}</div>
+                            ${description ? `<div class="text-sm text-gray-500">${description}</div>` : ''}
+                            <div class="text-sm text-gray-600">Qty: ${quantity} × $${parseFloat(unitCost).toFixed(2)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-gray-800">$${subtotalNum.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Generate Authorize.net line item
+                // Format: <item_id>|<item_name>|<item_description>|<quantity>|<unit_price>|<taxable>
+                const itemId = serviceIndex + 1;
+                const itemName = serviceName.replace(/\|/g, ''); // Remove pipes to avoid conflicts
+                const itemDescription = description.replace(/\|/g, ''); // Remove pipes to avoid conflicts
+                const lineItemValue = `${itemId}|${itemName}|${itemDescription}|${quantity}|${parseFloat(unitCost).toFixed(2)}|false`;
+                
+                lineItemHTML += `<input type="hidden" name="x_line_item" value="${lineItemValue}">`;
+                
+                serviceIndex++;
+            }
+            
+            quoteSummary.innerHTML = summaryHTML;
+            totalAmount.textContent = total.toFixed(2);
+            amountInput.value = total.toFixed(2);
+            lineItemsContainer.innerHTML = lineItemHTML;
+            
+            // Show debug information
+            if (serviceIndex > 0) {
+                const debugContainer = document.getElementById('debugLineItems');
+                const debugContent = document.getElementById('lineItemsDebug');
+                debugContainer.style.display = 'block';
+                
+                let debugHTML = '';
+                for (let i = 0; i < serviceIndex; i++) {
+                    const serviceName = urlParams.get(`productName${i}`);
+                    const quantity = urlParams.get(`quantity${i}`) || '1';
+                    const description = urlParams.get(`description${i}`) || '';
+                    const unitCost = urlParams.get(`unitCost${i}`) || '0';
+                    const itemId = i + 1;
+                    const itemName = serviceName.replace(/\|/g, '');
+                    const itemDescription = description.replace(/\|/g, '');
+                    const lineItemValue = `${itemId}|${itemName}|${itemDescription}|${quantity}|${parseFloat(unitCost).toFixed(2)}|false`;
+                    
+                    debugHTML += `<div class="mb-1">x_line_item: ${lineItemValue}</div>`;
+                }
+                debugContent.innerHTML = debugHTML;
+            }
+        }
+
+        function generateInvoiceNumber() {
+            const now = new Date();
+            const timestamp = now.getTime();
+            const random = Math.floor(Math.random() * 1000);
+            const invoiceNum = `INV-${timestamp}-${random}`;
+            document.getElementById('invoiceNum').value = invoiceNum;
+        }
+
+        // Format card number as user types
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            e.target.value = formattedValue;
+        });
+
+        // Format expiration date as user types
+        document.getElementById('expDate').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            e.target.value = value;
+        });
+
+        // Validate form before submission
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
+            const expDate = document.getElementById('expDate').value;
+            const cardCode = document.getElementById('cardCode').value;
+            
+            // Basic validation
+            if (cardNumber.length < 13 || cardNumber.length > 19) {
+                e.preventDefault();
+                alert('Please enter a valid card number');
+                return;
+            }
+            
+            if (!expDate.match(/^\d{2}\/\d{2}$/)) {
+                e.preventDefault();
+                alert('Please enter a valid expiration date (MM/YY)');
+                return;
+            }
+            
+            if (cardCode.length < 3 || cardCode.length > 4) {
+                e.preventDefault();
+                alert('Please enter a valid CVV');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...';
+            submitBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>
