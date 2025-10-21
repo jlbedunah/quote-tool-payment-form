@@ -20,6 +20,10 @@
       "dest": "/payment-form.html"
     },
     {
+      "src": "/payment-form.html",
+      "dest": "/payment-form.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/$1"
     }
