@@ -1,5 +1,4 @@
 {
-  "name": "quote-tool-payment-form",
   "version": 2,
   "builds": [
     {
@@ -8,6 +7,18 @@
     }
   ],
   "routes": [
+    {
+      "src": "/",
+      "dest": "/quote-tool.html"
+    },
+    {
+      "src": "/quote-tool",
+      "dest": "/quote-tool.html"
+    },
+    {
+      "src": "/payment-form",
+      "dest": "/payment-form.html"
+    },
     {
       "src": "/(.*)",
       "dest": "/$1"
