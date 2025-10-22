@@ -440,9 +440,11 @@
                 const lineItemInputs = document.querySelectorAll('input[name="x_line_item"]');
                 lineItemInputs.forEach(input => {
                     if (input.value) {
+                        console.log('Found line item:', input.value);
                         lineItems.push(input.value);
                     }
                 });
+                console.log('All line items:', lineItems);
                 formData.lineItems = lineItems;
                 
                 // Send to our API with bypass token

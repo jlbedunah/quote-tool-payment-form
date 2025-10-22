@@ -111,12 +111,14 @@ export default async function handler(req, res) {
     params.append('x_email', email);
     params.append('x_invoice_num', `INV-${Date.now()}`); // Unique invoice number
 
-    // Add line items
-    if (lineItems && lineItems.length > 0) {
-      lineItems.forEach(item => {
-        params.append('x_line_item', item);
-      });
-    }
+            // Add line items
+            if (lineItems && lineItems.length > 0) {
+              console.log('Line items being sent:', lineItems);
+              lineItems.forEach(item => {
+                console.log('Adding line item:', item);
+                params.append('x_line_item', item);
+              });
+            }
 
     // Send request to Authorize.net
     const response = await fetch(authorizeNetUrl, {
