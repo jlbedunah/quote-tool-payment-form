@@ -413,9 +413,16 @@
         // Accept.js function to get secure payment data
         function getSecurePaymentData(cardNumber, expDate, cardCode) {
             return new Promise((resolve, reject) => {
+                // Check if Accept.js is loaded
+                if (typeof Accept === 'undefined') {
+                    reject(new Error('Accept.js library not loaded. Please refresh the page.'));
+                    return;
+                }
+                
+                // For now, we'll use test credentials until Client Key is added to Vercel
                 const authData = {
-                    clientKey: 'YOUR_CLIENT_KEY', // We'll need to add this to environment variables
-                    apiLoginID: 'YOUR_API_LOGIN_ID' // We'll use the existing environment variable
+                    clientKey: '6AB64nP5R6', // Test Client Key for sandbox
+                    apiLoginID: '5KP3u95bQpv' // Test API Login ID for sandbox
                 };
                 
                 const cardData = {
@@ -425,16 +432,27 @@
                     cardCode: cardCode
                 };
                 
-                Accept.dispatchData(authData, cardData, (response) => {
-                    if (response.messages.resultCode === 'Ok') {
-                        resolve({
-                            dataDescriptor: response.opaqueData.dataDescriptor,
-                            dataValue: response.opaqueData.dataValue
-                        });
-                    } else {
-                        reject(new Error(response.messages.message[0].text));
-                    }
-                });
+                console.log('Sending to Accept.js:', { authData, cardData });
+                
+                try {
+                    Accept.dispatchData(authData, cardData, (response) => {
+                        console.log('Accept.js response:', response);
+                        
+                        if (response.messages.resultCode === 'Ok') {
+                            resolve({
+                                dataDescriptor: response.opaqueData.dataDescriptor,
+                                dataValue: response.opaqueData.dataValue
+                            });
+                        } else {
+                            const errorMessage = response.messages.message[0].text;
+                            console.error('Accept.js error:', errorMessage);
+                            reject(new Error(errorMessage));
+                        }
+                    });
+                } catch (error) {
+                    console.error('Accept.js dispatch error:', error);
+                    reject(new Error('Failed to process card data. Please check your card information.'));
+                }
             });
         }
 

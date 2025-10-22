@@ -42,19 +42,11 @@ export default async function handler(req, res) {
         });
     }
 
-    // Check if Authorize.net credentials are available
-    let loginId = process.env.AUTHORIZE_NET_LOGIN_ID;
-    let transactionKey = process.env.AUTHORIZE_NET_TRANSACTION_KEY;
+    // Use test credentials for Modern API (these work with the test Client Key)
+    const loginId = '5KP3u95bQpv';
+    const transactionKey = '346HZ32z3fP4hTG2';
 
-    // Log which credentials are being used
-    console.log('Using Login ID:', loginId ? loginId.substring(0, 2) + '****' : 'MISSING');
-
-    // Use test credentials if environment variables are not set or invalid
-    if (!loginId || !transactionKey) {
-        console.log('Using test credentials for Authorize.net');
-        loginId = '5KP3u95bQpv';
-        transactionKey = '346HZ32z3fP4hTG2';
-    }
+    console.log('Using test credentials for Authorize.net Modern API');
 
     // Authorize.net Modern API endpoint (Sandbox)
     const authorizeNetUrl = 'https://apitest.authorize.net/xml/v1/request.api';
