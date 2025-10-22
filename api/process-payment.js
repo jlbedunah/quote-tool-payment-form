@@ -52,6 +52,9 @@ export default async function handler(req, res) {
       }
     });
 
+    // Log which credentials are being used
+    console.log('Using Login ID:', loginId ? loginId.substring(0, 2) + '****' : 'MISSING');
+
     // Validate required fields
     if (!cardNumber || !expirationDate || !cardCode || !firstName || !lastName || !amount) {
       return res.status(400).json({ 
