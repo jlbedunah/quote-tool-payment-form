@@ -412,14 +412,14 @@
                     cardCode: cardCode,
                     firstName: document.getElementById('firstName').value,
                     lastName: document.getElementById('lastName').value,
-                    companyName: document.getElementById('companyName').value,
-                    address1: document.getElementById('address1').value,
-                    address2: document.getElementById('address2').value,
+                    companyName: document.getElementById('company').value,
+                    address1: document.getElementById('address').value,
+                    address2: '', // Not present in form
                     city: document.getElementById('city').value,
                     state: document.getElementById('state').value,
                     zip: document.getElementById('zip').value,
-                    country: document.getElementById('country').value,
-                    phoneNumber: document.getElementById('phoneNumber').value,
+                    country: 'US', // Default to US
+                    phoneNumber: document.getElementById('phone').value,
                     email: document.getElementById('email').value,
                     amount: document.getElementById('amount').value
                 };
