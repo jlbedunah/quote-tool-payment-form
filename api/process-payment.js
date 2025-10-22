@@ -34,11 +34,37 @@ export default async function handler(req, res) {
       lineItems
     } = req.body;
 
+    // Debug logging
+    console.log('API received data:', {
+      cardNumber: !!cardNumber,
+      expirationDate: !!expirationDate,
+      cardCode: !!cardCode,
+      firstName: !!firstName,
+      lastName: !!lastName,
+      amount: !!amount,
+      actualValues: {
+        cardNumber: cardNumber ? cardNumber.substring(0, 4) + '****' : 'MISSING',
+        expirationDate,
+        cardCode: cardCode ? '***' : 'MISSING',
+        firstName,
+        lastName,
+        amount
+      }
+    });
+
     // Validate required fields
     if (!cardNumber || !expirationDate || !cardCode || !firstName || !lastName || !amount) {
       return res.status(400).json({ 
         error: 'Missing required fields',
-        required: ['cardNumber', 'expirationDate', 'cardCode', 'firstName', 'lastName', 'amount']
+        required: ['cardNumber', 'expirationDate', 'cardCode', 'firstName', 'lastName', 'amount'],
+        received: {
+          cardNumber: !!cardNumber,
+          expirationDate: !!expirationDate,
+          cardCode: !!cardCode,
+          firstName: !!firstName,
+          lastName: !!lastName,
+          amount: !!amount
+        }
       });
     }
 
