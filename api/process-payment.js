@@ -52,9 +52,6 @@ export default async function handler(req, res) {
       }
     });
 
-    // Log which credentials are being used
-    console.log('Using Login ID:', loginId ? loginId.substring(0, 2) + '****' : 'MISSING');
-
     // Validate required fields
     if (!cardNumber || !expirationDate || !cardCode || !firstName || !lastName || !amount) {
       return res.status(400).json({ 
@@ -74,6 +71,9 @@ export default async function handler(req, res) {
     // Check if Authorize.net credentials are available
     let loginId = process.env.AUTHORIZE_NET_LOGIN_ID;
     let transactionKey = process.env.AUTHORIZE_NET_TRANSACTION_KEY;
+
+    // Log which credentials are being used
+    console.log('Using Login ID:', loginId ? loginId.substring(0, 2) + '****' : 'MISSING');
 
     // Use test credentials if environment variables are not set or invalid
     if (!loginId || !transactionKey) {
