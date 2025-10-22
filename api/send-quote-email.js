@@ -112,11 +112,11 @@ function generateEmailContent(quoteData, additionalMessage) {
 
   // Add service rows
   services.forEach(service => {
-    const serviceName = service.productName || service.productName0 || 'Service';
-    const description = service.description || service.description0 || '';
-    const quantity = service.quantity || service.quantity0 || '1';
-    const unitCost = service.unitCost || service.unitCost0 || '0';
-    const subtotal = service.subtotal || service.subtotal0 || '0';
+    const serviceName = service.productName || 'Service';
+    const description = service.description || '';
+    const quantity = service.quantity || '1';
+    const unitCost = service.unitCost || '0';
+    const subtotal = service.subtotal || '0';
     
     html += `
       <tr>
@@ -145,7 +145,7 @@ function generateEmailContent(quoteData, additionalMessage) {
             ` : ''}
             
             <div style="text-align: center; margin-top: 30px;">
-                <a href="#" class="cta-button">Proceed to Payment</a>
+                <a href="${generatePaymentLink(quoteData)}" class="cta-button">Proceed to Payment</a>
             </div>
             
             <div class="footer">
@@ -158,4 +158,37 @@ function generateEmailContent(quoteData, additionalMessage) {
   `;
 
   return html;
+}
+
+function generatePaymentLink(quoteData) {
+  const { firstName, lastName, companyName, email, phone, address1, address2, city, state, zip, services } = quoteData;
+  
+  // Base URL for the payment form
+  const baseUrl = 'https://quote-tool-payment-form.vercel.app/payment-form.html';
+  
+  // Build query parameters
+  const params = new URLSearchParams();
+  
+  // Add customer information
+  params.append('firstName', firstName || '');
+  params.append('lastName', lastName || '');
+  params.append('companyName', companyName || '');
+  params.append('email', email || '');
+  params.append('phone', phone || '');
+  params.append('address1', address1 || '');
+  params.append('address2', address2 || '');
+  params.append('city', city || '');
+  params.append('state', state || '');
+  params.append('zip', zip || '');
+  
+  // Add services
+  services.forEach((service, index) => {
+    params.append(`productName${index}`, service.productName || '');
+    params.append(`quantity${index}`, service.quantity || '1');
+    params.append(`description${index}`, service.description || '');
+    params.append(`unitCost${index}`, service.unitCost || '0');
+    params.append(`subtotal${index}`, service.subtotal || '0');
+  });
+  
+  return `${baseUrl}?${params.toString()}`;
 }
