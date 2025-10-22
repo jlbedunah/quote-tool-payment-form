@@ -1,4 +1,4 @@
-const { Resend } = require('resend');
+import { Resend } from 'resend';
 
 // Check if API key is available
 if (!process.env.RESEND_API_KEY) {
@@ -34,8 +34,9 @@ export default async function handler(req, res) {
 
     // Send email using Resend
     const data = await resend.emails.send({
-      from: 'quotes@yourdomain.com', // Replace with your verified domain
+      from: 'quotes@mybookkeepers.com',
       to: [recipientEmail],
+      replyTo: 'jason@mybookkeepers.com',
       subject: subject || 'Your Quote Request',
       html: emailContent,
     });
