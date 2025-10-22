@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     }
 
     // Authorize.net API endpoint (Sandbox)
-    const authorizeNetUrl = 'https://secure.authorize.net/gateway/transact.dll';
+    const authorizeNetUrl = 'https://test.authorize.net/gateway/transact.dll';
 
     // Construct Authorize.net POST data
     const params = new URLSearchParams();
