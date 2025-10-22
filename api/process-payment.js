@@ -111,13 +111,14 @@ export default async function handler(req, res) {
     params.append('x_email', email);
     params.append('x_invoice_num', `INV-${Date.now()}`); // Unique invoice number
 
-            // Add line items
+            // Add line items (temporarily disabled for testing)
             if (lineItems && lineItems.length > 0) {
               console.log('Line items being sent:', lineItems);
-              lineItems.forEach(item => {
-                console.log('Adding line item:', item);
-                params.append('x_line_item', item);
-              });
+              console.log('SKIPPING line items for testing - Authorize.net sandbox issue');
+              // lineItems.forEach(item => {
+              //   console.log('Adding line item:', item);
+              //   params.append('x_line_item', item);
+              // });
             }
 
     // Send request to Authorize.net
