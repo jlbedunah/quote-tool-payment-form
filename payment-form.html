@@ -293,6 +293,14 @@
                 const unitCost = urlParams.get(`unitCost${serviceIndex}`) || '0';
                 const subtotal = urlParams.get(`subtotal${serviceIndex}`) || '0';
                 
+                console.log(`Processing service ${serviceIndex}:`, {
+                    serviceName,
+                    quantity,
+                    description,
+                    unitCost,
+                    subtotal
+                });
+                
                 const subtotalNum = parseFloat(subtotal);
                 total += subtotalNum;
                 
@@ -316,6 +324,8 @@
                 const itemName = serviceName.replace(/\|/g, ''); // Remove pipes to avoid conflicts
                 const itemDescription = description.replace(/\|/g, ''); // Remove pipes to avoid conflicts
                 const lineItemValue = `${itemId}|${itemName}|${itemDescription}|${quantity}|${parseFloat(unitCost).toFixed(2)}|false`;
+                
+                console.log(`Generated line item ${serviceIndex}:`, lineItemValue);
                 
                 lineItemHTML += `<input type="hidden" name="x_line_item" value="${lineItemValue}">`;
                 
