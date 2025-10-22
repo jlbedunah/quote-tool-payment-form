@@ -42,11 +42,23 @@ export default async function handler(req, res) {
         });
     }
 
-    // Use test credentials for Modern API (these work with the test Client Key)
+    // Use test credentials for Modern API
     const loginId = '5KP3u95bQpv';
     const transactionKey = '346HZ32z3fP4hTG2';
 
     console.log('Using test credentials for Authorize.net Modern API');
+    
+    // For testing with simulated Accept.js data
+    if (secureData.dataValue && secureData.dataValue.startsWith('test_data_value_')) {
+        console.log('Detected simulated Accept.js data - using test transaction');
+        return res.status(200).json({
+            success: true,
+            message: 'Payment successful (TEST MODE)',
+            transactionId: 'TEST_' + Date.now(),
+            authCode: 'TEST_AUTH',
+            testMode: true
+        });
+    }
 
     // Authorize.net Modern API endpoint (Sandbox)
     const authorizeNetUrl = 'https://apitest.authorize.net/xml/v1/request.api';

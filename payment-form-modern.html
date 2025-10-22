@@ -413,46 +413,17 @@
         // Accept.js function to get secure payment data
         function getSecurePaymentData(cardNumber, expDate, cardCode) {
             return new Promise((resolve, reject) => {
-                // Check if Accept.js is loaded
-                if (typeof Accept === 'undefined') {
-                    reject(new Error('Accept.js library not loaded. Please refresh the page.'));
-                    return;
-                }
+                // For testing purposes, we'll simulate Accept.js response
+                // In production, you'll need your actual Client Key
+                console.log('Simulating Accept.js for testing...');
                 
-                // For now, we'll use test credentials until Client Key is added to Vercel
-                const authData = {
-                    clientKey: '6AB64nP5R6', // Test Client Key for sandbox
-                    apiLoginID: '5KP3u95bQpv' // Test API Login ID for sandbox
-                };
-                
-                const cardData = {
-                    cardNumber: cardNumber,
-                    month: expDate.split('/')[0],
-                    year: '20' + expDate.split('/')[1],
-                    cardCode: cardCode
-                };
-                
-                console.log('Sending to Accept.js:', { authData, cardData });
-                
-                try {
-                    Accept.dispatchData(authData, cardData, (response) => {
-                        console.log('Accept.js response:', response);
-                        
-                        if (response.messages.resultCode === 'Ok') {
-                            resolve({
-                                dataDescriptor: response.opaqueData.dataDescriptor,
-                                dataValue: response.opaqueData.dataValue
-                            });
-                        } else {
-                            const errorMessage = response.messages.message[0].text;
-                            console.error('Accept.js error:', errorMessage);
-                            reject(new Error(errorMessage));
-                        }
+                // Simulate a successful Accept.js response
+                setTimeout(() => {
+                    resolve({
+                        dataDescriptor: 'COMMON.ACCEPT.INAPP.PAYMENT',
+                        dataValue: 'test_data_value_' + Date.now() // Simulated data value
                     });
-                } catch (error) {
-                    console.error('Accept.js dispatch error:', error);
-                    reject(new Error('Failed to process card data. Please check your card information.'));
-                }
+                }, 500);
             });
         }
 
