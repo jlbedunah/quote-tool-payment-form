@@ -424,6 +424,17 @@
                     amount: document.getElementById('amount').value
                 };
                 
+                // Debug logging
+                console.log('Form data being sent:', formData);
+                console.log('Required fields check:', {
+                    cardNumber: !!formData.cardNumber,
+                    expirationDate: !!formData.expirationDate,
+                    cardCode: !!formData.cardCode,
+                    firstName: !!formData.firstName,
+                    lastName: !!formData.lastName,
+                    amount: !!formData.amount
+                });
+                
                 // Collect line items
                 const lineItems = [];
                 const lineItemInputs = document.querySelectorAll('input[name="x_line_item"]');
