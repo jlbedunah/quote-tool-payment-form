@@ -1,6 +1,7 @@
 {
   "name": "quote-tool-payment-form",
   "version": "1.0.0",
+  "type": "module",
   "description": "Quote tool with payment form integration",
   "main": "index.js",
   "scripts": {
