@@ -78,84 +78,82 @@ export default async function handler(req, res) {
       });
     }
 
-    // Create transaction request
-    const transactionRequest = {
-      createTransactionRequest: {
-        merchantAuthentication: {
-          name: loginId,
-          transactionKey: transactionKey
-        },
-        refId: `ref_${Date.now()}`,
-        transactionRequest: {
-          transactionType: 'authCaptureTransaction',
-          amount: amount,
-          payment: {
-            creditCard: {
-              cardNumber: cardNumber.replace(/\s/g, ''), // Remove spaces
-              expirationDate: expirationDate,
-              cardCode: cardCode
-            }
-          },
-          billTo: {
-            firstName: firstName,
-            lastName: lastName,
-            company: companyName || '',
-            address: address1 || '',
-            city: city || '',
-            state: state || '',
-            zip: zip || '',
-            country: country || 'US',
-            phoneNumber: phoneNumber || '',
-            email: email || ''
-          },
-          lineItems: lineItems || []
-        }
-      }
-    };
+    // Authorize.net API endpoint (Sandbox)
+    const authorizeNetUrl = 'https://secure.authorize.net/gateway/transact.dll';
+
+    // Construct Authorize.net POST data
+    const params = new URLSearchParams();
+    params.append('x_login', loginId);
+    params.append('x_tran_key', transactionKey);
+    params.append('x_version', '3.1');
+    params.append('x_delim_data', 'TRUE');
+    params.append('x_delim_char', '|');
+    params.append('x_relay_response', 'FALSE');
+    params.append('x_type', 'AUTH_CAPTURE'); // or AUTH_ONLY
+    params.append('x_method', 'CC');
+    params.append('x_card_num', cardNumber);
+    params.append('x_exp_date', expirationDate); // MM/YY
+    params.append('x_card_code', cardCode);
+    params.append('x_amount', amount);
+    params.append('x_first_name', firstName);
+    params.append('x_last_name', lastName);
+    params.append('x_company', companyName || '');
+    params.append('x_address', address1 + (address2 ? ' ' + address2 : ''));
+    params.append('x_city', city || '');
+    params.append('x_state', state || '');
+    params.append('x_zip', zip || '');
+    params.append('x_country', country || '');
+    params.append('x_phone', phoneNumber || '');
+    params.append('x_email', email);
+    params.append('x_invoice_num', `INV-${Date.now()}`); // Unique invoice number
+
+    // Add line items
+    if (lineItems && lineItems.length > 0) {
+      lineItems.forEach(item => {
+        params.append('x_line_item', item);
+      });
+    }
 
     // Send request to Authorize.net
-    const authnetResponse = await fetch('https://apitest.authorize.net/xml/v1/request.api', {
+    const response = await fetch(authorizeNetUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(transactionRequest)
+      body: params.toString(),
     });
 
-    const authnetResult = await authnetResponse.json();
+    const responseText = await response.text();
+    const responseFields = responseText.split('|');
 
-    // Log the transaction (for debugging - remove in production)
-    console.log('Authorize.net Response:', JSON.stringify(authnetResult, null, 2));
+    const responseCode = responseFields[0]; // 1 = Approved, 2 = Declined, 3 = Error
+    const responseReasonCode = responseFields[2];
+    const responseReasonText = responseFields[3];
+    const transactionId = responseFields[6];
 
-    // Check if transaction was successful
-    if (authnetResult.messages.resultCode === 'Ok') {
-      const transaction = authnetResult.transactionResponse;
-      
+    console.log('Authorize.net Response:', responseText);
+
+    if (responseCode === '1') {
       return res.status(200).json({
         success: true,
-        transactionId: transaction.transId,
-        authCode: transaction.authCode,
-        responseCode: transaction.responseCode,
-        message: 'Payment processed successfully'
+        message: 'Payment successful',
+        transactionId: transactionId,
+        rawResponse: responseText
       });
     } else {
-      // Transaction failed
-      const errors = authnetResult.transactionResponse?.errors || [];
-      const errorMessages = errors.map(error => error.errorText).join(', ');
-      
+      console.error('Authorize.net Error:', responseReasonText, responseText);
       return res.status(400).json({
         success: false,
-        error: errorMessages || 'Transaction failed',
-        responseCode: authnetResult.transactionResponse?.responseCode,
-        errors: errors
+        error: responseReasonText || 'Payment declined',
+        rawResponse: responseText
       });
     }
 
   } catch (error) {
-    console.error('Payment processing error:', error);
+    console.error('Error communicating with Authorize.net:', error);
     return res.status(500).json({
       success: false,
-      error: 'Internal server error',
+      error: 'Failed to process payment due to a network error.',
       details: error.message
     });
   }
