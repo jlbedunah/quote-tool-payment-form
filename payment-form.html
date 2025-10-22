@@ -275,6 +275,10 @@
         }
 
         function populateQuoteSummary(urlParams) {
+            console.log('URL Parameters:', urlParams);
+            console.log('Has productName0:', urlParams.has('productName0'));
+            console.log('Has productName1:', urlParams.has('productName1'));
+            
             const quoteSummary = document.getElementById('quoteSummary');
             const totalAmount = document.getElementById('totalAmount');
             const amountInput = document.getElementById('amount');
