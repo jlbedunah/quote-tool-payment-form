@@ -11,11 +11,12 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#eff6ff',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                        }
+                            50: '#fef2f2',
+                            500: '#CA1824',
+                            600: '#B0151F',
+                            700: '#96121A',
+                        },
+                        brand: '#CA1824'
                     }
                 }
             }
@@ -26,10 +27,29 @@
     <div class="max-w-6xl mx-auto p-6">
         <!-- Header -->
         <div class="bg-white rounded-t-xl shadow-lg border-b border-gray-200">
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 rounded-t-xl">
+            <div class="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-8 rounded-t-xl">
                 <div class="text-center">
+                    <!-- Logo -->
+                    <div class="flex justify-center items-center mb-4">
+                        <div class="flex items-center bg-white rounded-lg px-4 py-2 shadow-lg">
+                            <!-- Red checkmark icon -->
+                            <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-3">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <!-- Logo text -->
+                            <div class="text-left">
+                                <div class="text-lg font-bold">
+                                    <span class="text-black">My</span>
+                                    <span class="text-red-600" style="color: #CA1824;">Bookkeepers.com</span>
+                                </div>
+                                <div class="text-xs text-gray-600 font-medium">Passionate About Bookkeeping</div>
+                            </div>
+                        </div>
+                    </div>
                     <h1 class="text-4xl font-bold mb-2">Quote Tool</h1>
-                    <p class="text-blue-100 text-lg">Create professional quotes with ease</p>
+                    <p class="text-gray-300 text-lg">Create professional quotes with ease</p>
                 </div>
             </div>
         </div>
@@ -194,7 +214,10 @@
                     </div>
                 </div>
 
-                <button type="button" class="add-row-btn bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium flex items-center mx-auto" 
+                <button type="button" class="add-row-btn text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium flex items-center mx-auto" 
+                        style="background-color: #CA1824;" 
+                        onmouseover="this.style.backgroundColor='#B0151F'" 
+                        onmouseout="this.style.backgroundColor='#CA1824'"
                         onclick="addServiceRow()">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -204,30 +227,106 @@
             </div>
 
             <!-- Total Section -->
-            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 border-b border-gray-200">
+            <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-8 border-b border-gray-200">
                 <div class="text-right">
                     <div class="text-3xl font-bold text-gray-800">
-                        Total: $<span id="grandTotal" class="text-blue-600">0.00</span>
+                        Total: $<span id="grandTotal" style="color: #CA1824;">0.00</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Build Link Section -->
+            <!-- Action Buttons Section -->
             <div class="p-8 bg-gray-50">
-                <div class="text-center">
-                    <button type="button" class="build-link-btn bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1" 
-                            onclick="buildLink()">
-                        <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                        </svg>
-                        Copy Link & Go to Payment
-                    </button>
-                    <p class="text-sm text-gray-500 mt-4">
+                <div class="text-center space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button type="button" class="build-link-btn text-white px-8 py-4 rounded-lg transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1" 
+                                style="background-color: #CA1824;" 
+                                onmouseover="this.style.backgroundColor='#B0151F'" 
+                                onmouseout="this.style.backgroundColor='#CA1824'"
+                                onclick="buildLink()">
+                            <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                            </svg>
+                            Copy Link & Go to Payment
+                        </button>
+                        
+                        <button type="button" class="email-quote-btn bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1" 
+                                onclick="openEmailModal()">
+                            <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            Send Quote via Email
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500">
                         Link will be copied to clipboard and you'll be redirected to the payment form
                     </p>
                 </div>
             </div>
         </form>
+    </div>
+
+    <!-- Email Modal -->
+    <div id="emailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Send Quote via Email</h3>
+                    <button type="button" onclick="closeEmailModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="emailForm">
+                    <div class="mb-4">
+                        <label for="recipientEmail" class="block text-sm font-medium text-gray-700 mb-2">
+                            Recipient Email Address *
+                        </label>
+                        <input type="email" id="recipientEmail" name="recipientEmail" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                               placeholder="customer@example.com">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="emailSubject" class="block text-sm font-medium text-gray-700 mb-2">
+                            Subject Line
+                        </label>
+                        <input type="text" id="emailSubject" name="emailSubject"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                               placeholder="Your Quote Request" value="Your Quote Request">
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="emailMessage" class="block text-sm font-medium text-gray-700 mb-2">
+                            Additional Message (Optional)
+                        </label>
+                        <textarea id="emailMessage" name="emailMessage" rows="3"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                  placeholder="Add any additional notes or instructions..."></textarea>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeEmailModal()"
+                                class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" id="sendEmailBtn"
+                                class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                            <span id="sendEmailText">Send Quote</span>
+                            <span id="sendEmailLoading" class="hidden">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Sending...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -585,6 +684,134 @@
             
             // Initialize all service dropdowns
             initializeAllDropdowns();
+        });
+
+        // Email functionality
+        function openEmailModal() {
+            document.getElementById('emailModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            
+            // Pre-fill recipient email if customer email is available
+            const customerEmail = document.getElementById('email').value;
+            if (customerEmail) {
+                document.getElementById('recipientEmail').value = customerEmail;
+            }
+        }
+
+        function closeEmailModal() {
+            document.getElementById('emailModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            
+            // Reset form
+            document.getElementById('emailForm').reset();
+            if (document.getElementById('email').value) {
+                document.getElementById('recipientEmail').value = document.getElementById('email').value;
+            }
+        }
+
+        // Handle email form submission
+        document.getElementById('emailForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const sendBtn = document.getElementById('sendEmailBtn');
+            const sendText = document.getElementById('sendEmailText');
+            const sendLoading = document.getElementById('sendEmailLoading');
+            
+            // Show loading state
+            sendText.classList.add('hidden');
+            sendLoading.classList.remove('hidden');
+            sendBtn.disabled = true;
+            
+            try {
+                // Collect form data
+                const formData = new FormData(document.getElementById('quoteForm'));
+                const emailData = {
+                    recipientEmail: document.getElementById('recipientEmail').value,
+                    subject: document.getElementById('emailSubject').value,
+                    message: document.getElementById('emailMessage').value,
+                    quoteData: {}
+                };
+                
+                // Add customer information
+                const customerFields = ['firstName', 'lastName', 'companyName', 'email', 'phone', 'address1', 'address2', 'city', 'state', 'zip'];
+                customerFields.forEach(field => {
+                    const value = formData.get(field);
+                    if (value) {
+                        emailData.quoteData[field] = value;
+                    }
+                });
+                
+                // Add service details
+                const rows = document.querySelectorAll('.service-row');
+                emailData.quoteData.services = [];
+                rows.forEach((row, index) => {
+                    const rowData = row.querySelectorAll('input, textarea');
+                    const service = {};
+                    rowData.forEach(input => {
+                        if (input.value) {
+                            service[input.name] = input.value;
+                        }
+                    });
+                    if (Object.keys(service).length > 0) {
+                        emailData.quoteData.services.push(service);
+                    }
+                });
+                
+                // Add total
+                emailData.quoteData.total = document.getElementById('grandTotal').textContent;
+                
+                // Send to serverless function
+                const response = await fetch('/api/send-quote-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(emailData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success message
+                    sendText.textContent = 'Email Sent!';
+                    sendText.classList.remove('hidden');
+                    sendLoading.classList.add('hidden');
+                    sendBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    sendBtn.classList.add('bg-green-500');
+                    
+                    // Close modal after delay
+                    setTimeout(() => {
+                        closeEmailModal();
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Failed to send email');
+                }
+                
+            } catch (error) {
+                console.error('Error sending email:', error);
+                
+                // Show error state
+                sendText.textContent = 'Error - Try Again';
+                sendText.classList.remove('hidden');
+                sendLoading.classList.add('hidden');
+                sendBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                sendBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                
+                // Reset after delay
+                setTimeout(() => {
+                    sendText.textContent = 'Send Quote';
+                    sendBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    sendBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    sendBtn.disabled = false;
+                }, 3000);
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('emailModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEmailModal();
+            }
         });
     </script>
 </body>

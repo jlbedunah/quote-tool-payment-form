@@ -1,0 +1,7 @@
+<script>
+var head = document.head;
+var script = document.createElement('script');
+script.type = 'text/javascript';
+script.src = "https://t.mybookkeepers.com/v1/lst/universal-script?ph=cfa99e7cf0bfaa3f377a76c9efca19d672fdc7eab55b71a9f40e80623231ee9d&tag=!clicked&ref_url=" + encodeURI(document.URL) ;
+head.appendChild(script);
+</script>

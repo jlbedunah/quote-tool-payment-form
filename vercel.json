@@ -1,9 +1,14 @@
 {
+  "name": "quote-tool-payment-form",
   "version": 2,
   "builds": [
     {
       "src": "*.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -22,6 +27,10 @@
     {
       "src": "/payment-form.html",
       "dest": "/payment-form.html"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
       "src": "/(.*)",
