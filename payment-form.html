@@ -434,11 +434,12 @@
                 });
                 formData.lineItems = lineItems;
                 
-                // Send to our API
+                // Send to our API with bypass token
                 const response = await fetch('/api/process-payment', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'x-vercel-protection-bypass': 'YOUR_BYPASS_TOKEN_HERE'
                     },
                     body: JSON.stringify(formData)
                 });

@@ -1,6 +1,14 @@
 import crypto from 'crypto';
 
 export default async function handler(req, res) {
+  // Check for protection bypass token
+  const bypassToken = req.headers['x-vercel-protection-bypass'];
+  const expectedBypassToken = process.env.VERCEL_PROTECTION_BYPASS;
+  
+  if (expectedBypassToken && bypassToken !== expectedBypassToken) {
+    return res.status(401).json({ error: 'Unauthorized - Invalid bypass token' });
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

@@ -760,11 +760,12 @@
                 // Add total
                 emailData.quoteData.total = document.getElementById('grandTotal').textContent;
                 
-                // Send to serverless function
+                // Send to serverless function with bypass token
                 const response = await fetch('/api/send-quote-email', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'x-vercel-protection-bypass': 'YOUR_BYPASS_TOKEN_HERE'
                     },
                     body: JSON.stringify(emailData)
                 });
