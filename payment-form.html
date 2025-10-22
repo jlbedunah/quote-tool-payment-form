@@ -324,12 +324,30 @@
                 
                 // Generate Authorize.net line item
                 // Format: <item_id>|<item_name>|<item_description>|<quantity>|<unit_price>|<taxable>
-                const itemId = serviceIndex + 1;
-                const itemName = serviceName.replace(/\|/g, ''); // Remove pipes to avoid conflicts
-                const itemDescription = description.replace(/\|/g, ''); // Remove pipes to avoid conflicts
-                const lineItemValue = `${itemId}|${itemName}|${itemDescription}|${quantity}|${parseFloat(unitCost).toFixed(2)}|false`;
+                const itemId = (serviceIndex + 1).toString();
+                
+                // Clean and truncate item name (max 31 chars)
+                let itemName = serviceName.replace(/[|<>]/g, '').substring(0, 31);
+                
+                // Clean and truncate description (max 255 chars)
+                let itemDescription = description.replace(/[|<>]/g, '').substring(0, 255);
+                
+                // Ensure quantity is positive integer
+                const cleanQuantity = Math.max(1, Math.floor(parseFloat(quantity) || 1));
+                
+                // Ensure unit price is positive decimal
+                const cleanUnitPrice = Math.max(0.01, parseFloat(unitCost) || 0.01);
+                
+                const lineItemValue = `${itemId}|${itemName}|${itemDescription}|${cleanQuantity}|${cleanUnitPrice.toFixed(2)}|false`;
                 
                 console.log(`Generated line item ${serviceIndex}:`, lineItemValue);
+                console.log(`Item validation:`, {
+                    itemId: itemId.length,
+                    itemName: itemName.length,
+                    itemDescription: itemDescription.length,
+                    quantity: cleanQuantity,
+                    unitPrice: cleanUnitPrice
+                });
                 
                 lineItemHTML += `<input type="hidden" name="x_line_item" value="${lineItemValue}">`;
                 

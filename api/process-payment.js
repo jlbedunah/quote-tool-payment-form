@@ -111,12 +111,28 @@ export default async function handler(req, res) {
     params.append('x_email', email);
     params.append('x_invoice_num', `INV-${Date.now()}`); // Unique invoice number
 
-            // Add line items with corrected format
+            // Add line items with validation
             if (lineItems && lineItems.length > 0) {
               console.log('Line items being sent:', lineItems);
               lineItems.forEach((item, index) => {
                 console.log(`Adding line item ${index + 1}:`, item);
-                // Ensure proper format: <item_id>|<item_name>|<item_description>|<quantity>|<unit_price>|<taxable>
+                
+                // Validate line item format
+                const parts = item.split('|');
+                if (parts.length === 6) {
+                  const [itemId, itemName, itemDescription, quantity, unitPrice, taxable] = parts;
+                  console.log(`Line item ${index + 1} validation:`, {
+                    itemId: itemId.length,
+                    itemName: itemName.length,
+                    itemDescription: itemDescription.length,
+                    quantity: quantity,
+                    unitPrice: unitPrice,
+                    taxable: taxable
+                  });
+                } else {
+                  console.error(`Invalid line item format: ${item} (expected 6 parts, got ${parts.length})`);
+                }
+                
                 params.append('x_line_item', item);
               });
             }
