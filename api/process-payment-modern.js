@@ -42,21 +42,19 @@ export default async function handler(req, res) {
         });
     }
 
-    // Use test credentials for Modern API
-    const loginId = '5KP3u95bQpv';
-    const transactionKey = '346HZ32z3fP4hTG2';
+    // Use your actual Authorize.net credentials from environment variables
+    const loginId = process.env.AUTHORIZE_NET_LOGIN_ID;
+    const transactionKey = process.env.AUTHORIZE_NET_TRANSACTION_KEY;
 
-    console.log('Using test credentials for Authorize.net Modern API');
-    
-    // For testing with simulated Accept.js data
-    if (secureData.dataValue && secureData.dataValue.startsWith('test_data_value_')) {
-        console.log('Detected simulated Accept.js data - using test transaction');
-        return res.status(200).json({
-            success: true,
-            message: 'Payment successful (TEST MODE)',
-            transactionId: 'TEST_' + Date.now(),
-            authCode: 'TEST_AUTH',
-            testMode: true
+    console.log('Using Authorize.net credentials:', {
+        loginId: loginId ? loginId.substring(0, 2) + '****' : 'MISSING',
+        transactionKey: transactionKey ? 'CONFIGURED' : 'MISSING'
+    });
+
+    if (!loginId || !transactionKey) {
+        return res.status(500).json({
+            success: false,
+            error: 'Authorize.net credentials not configured. Please add AUTHORIZE_NET_LOGIN_ID and AUTHORIZE_NET_TRANSACTION_KEY to environment variables.'
         });
     }
 
