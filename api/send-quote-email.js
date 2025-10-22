@@ -171,8 +171,8 @@ function generateEmailContent(quoteData, additionalMessage) {
 function generatePaymentLink(quoteData) {
   const { firstName, lastName, companyName, email, phone, address1, address2, city, state, zip, services } = quoteData;
   
-  // Base URL for the payment form
-  const baseUrl = 'https://quotes.mybookkeepers.com/payment-form-modern.html';
+          // Base URL for the payment form
+          const baseUrl = 'https://quotes.mybookkeepers.com/payment-form-robust.html';
   
   // Build query parameters
   const params = new URLSearchParams();

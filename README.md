@@ -24,7 +24,7 @@ A complete quote generation and payment processing system built with HTML, CSS (
 - **Catch-up Bookkeeping** - $219
 - **Tax Return (LLC)** - $799
 - **Tax Return (S-Corp)** - $799
-- **Monthly Bookkeeping Subscription** - Custom pricing
+- **Monthly Bookkeeping Subscription** - $199
 
 ## Setup
 

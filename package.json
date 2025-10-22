@@ -10,7 +10,8 @@
     "start": "echo 'Static site - no start script needed'"
   },
   "dependencies": {
-    "resend": "^3.2.0"
+    "resend": "^3.2.0",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {},
   "keywords": ["quote", "payment", "form", "vercel"],

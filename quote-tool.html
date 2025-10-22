@@ -487,13 +487,13 @@
                 });
             });
             
-            // Generate the URL - ensure it points to payment-form-modern.html
+            // Generate the URL - ensure it points to payment-form-robust.html
             let baseUrl;
             if (window.location.pathname.includes('quote-tool.html')) {
-                baseUrl = window.location.origin + window.location.pathname.replace('quote-tool.html', 'payment-form-modern.html');
+                baseUrl = window.location.origin + window.location.pathname.replace('quote-tool.html', 'payment-form-robust.html');
             } else {
                 // If running from root or other path, construct payment form URL
-                baseUrl = window.location.origin + '/payment-form-modern.html';
+                baseUrl = window.location.origin + '/payment-form-robust.html';
             }
             const fullUrl = baseUrl + '?' + params.toString();
             
