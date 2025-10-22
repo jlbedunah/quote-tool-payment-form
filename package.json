@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "resend": "^3.2.0",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "fast-xml-parser": "^4.4.0"
   },
   "devDependencies": {},
   "keywords": ["quote", "payment", "form", "vercel"],

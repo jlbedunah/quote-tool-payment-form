@@ -334,7 +334,14 @@
                         body: JSON.stringify(formData)
                     });
                     
-                    const result = await response.json();
+                    const raw = await response.text();
+                    let result;
+                    try {
+                        result = JSON.parse(raw);
+                    } catch (e) {
+                        console.error('Non-JSON response:', raw);
+                        throw new Error(raw?.slice(0, 200) || 'Server returned non-JSON response');
+                    }
                     console.log('Payment response:', result);
                     
                     if (result.success) {
