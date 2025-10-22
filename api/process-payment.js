@@ -111,30 +111,32 @@ export default async function handler(req, res) {
     params.append('x_email', email);
     params.append('x_invoice_num', `INV-${Date.now()}`); // Unique invoice number
 
-            // Add line items with validation
+            // Add line items with validation - TESTING WITH SINGLE ITEM ONLY
             if (lineItems && lineItems.length > 0) {
               console.log('Line items being sent:', lineItems);
-              lineItems.forEach((item, index) => {
-                console.log(`Adding line item ${index + 1}:`, item);
-                
-                // Validate line item format
-                const parts = item.split('|');
-                if (parts.length === 6) {
-                  const [itemId, itemName, itemDescription, quantity, unitPrice, taxable] = parts;
-                  console.log(`Line item ${index + 1} validation:`, {
-                    itemId: itemId.length,
-                    itemName: itemName.length,
-                    itemDescription: itemDescription.length,
-                    quantity: quantity,
-                    unitPrice: unitPrice,
-                    taxable: taxable
-                  });
-                } else {
-                  console.error(`Invalid line item format: ${item} (expected 6 parts, got ${parts.length})`);
-                }
-                
-                params.append('x_line_item', item);
-              });
+              console.log('TESTING: Only adding first line item to isolate the issue');
+              
+              // Only add the first line item for testing
+              const firstItem = lineItems[0];
+              console.log(`Adding ONLY line item 1:`, firstItem);
+              
+              // Validate line item format
+              const parts = firstItem.split('|');
+              if (parts.length === 6) {
+                const [itemId, itemName, itemDescription, quantity, unitPrice, taxable] = parts;
+                console.log(`Line item 1 validation:`, {
+                  itemId: itemId,
+                  itemName: itemName.length,
+                  itemDescription: itemDescription.length,
+                  quantity: quantity,
+                  unitPrice: unitPrice,
+                  taxable: taxable
+                });
+              } else {
+                console.error(`Invalid line item format: ${firstItem} (expected 6 parts, got ${parts.length})`);
+              }
+              
+              params.append('x_line_item', firstItem);
             }
 
     // Send request to Authorize.net
