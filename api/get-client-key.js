@@ -15,7 +15,10 @@ export default async function handler(req, res) {
     const apiLoginID = process.env.AUTHORIZE_NET_LOGIN_ID;
 
     console.log('Client Key available:', !!clientKey);
+    console.log('Client Key length:', clientKey ? clientKey.length : 0);
+    console.log('Client Key preview:', clientKey ? clientKey.substring(0, 4) + '****' : 'MISSING');
     console.log('API Login ID available:', !!apiLoginID);
+    console.log('API Login ID preview:', apiLoginID ? apiLoginID.substring(0, 4) + '****' : 'MISSING');
 
     if (!clientKey || !apiLoginID) {
         return res.status(500).json({ 
