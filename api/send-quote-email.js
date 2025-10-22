@@ -172,7 +172,7 @@ function generatePaymentLink(quoteData) {
   const { firstName, lastName, companyName, email, phone, address1, address2, city, state, zip, services } = quoteData;
   
   // Base URL for the payment form
-  const baseUrl = 'https://quote-tool-payment-form.vercel.app/payment-form.html';
+  const baseUrl = 'https://quotes.mybookkeepers.com/payment-form-modern.html';
   
   // Build query parameters
   const params = new URLSearchParams();
