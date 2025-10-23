@@ -16,10 +16,35 @@ export default async function handler(req, res) {
         if (!cardNumber || !expDate || !cardCode || !amount || !firstName || !lastName || !address1 || !city || !state || !zip || !email) {
             return res.status(400).json({ success: false, error: 'Missing required payment or customer information.' });
         }
-        const loginId = process.env.AUTHORIZE_NET_LOGIN_ID;
-        const transactionKey = process.env.AUTHORIZE_NET_TRANSACTION_KEY;
+        // Determine environment (production vs sandbox)
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.AUTHORIZE_NET_ENVIRONMENT === 'production';
+        
+        // Get credentials based on environment
+        const loginId = isProduction ? process.env.AUTHORIZE_NET_LOGIN_ID_PROD : process.env.AUTHORIZE_NET_LOGIN_ID;
+        const transactionKey = isProduction ? process.env.AUTHORIZE_NET_TRANSACTION_KEY_PROD : process.env.AUTHORIZE_NET_TRANSACTION_KEY;
+        
+        console.log('Payment processing environment:', isProduction ? 'PRODUCTION' : 'SANDBOX');
+        console.log('Using Login ID:', loginId ? loginId.substring(0, 4) + '****' : 'MISSING');
+        
         if (!loginId || !transactionKey) {
-            return res.status(500).json({ success: false, error: 'Authorize.net credentials not configured.' });
+            return res.status(500).json({ 
+                success: false, 
+                error: `Authorize.net ${isProduction ? 'production' : 'sandbox'} credentials not configured.` 
+            });
+        }
+
+        // Enhanced validation for production
+        if (isProduction) {
+            // Additional validation for production
+            if (!isValidCardNumber(cardNumber)) {
+                return res.status(400).json({ success: false, error: 'Invalid card number format.' });
+            }
+            if (!isValidExpDate(expDate)) {
+                return res.status(400).json({ success: false, error: 'Invalid expiration date format.' });
+            }
+            if (!isValidCVV(cardCode)) {
+                return res.status(400).json({ success: false, error: 'Invalid CVV format.' });
+            }
         }
 
         const [month, yearPart] = expDate.split('/');
@@ -57,19 +82,27 @@ export default async function handler(req, res) {
                         city, state, zip, country: country || 'US', email
                     },
                     transactionSettings: {
-                        setting: [ { settingName: 'testRequest', settingValue: 'false' } ]
+                        setting: [ 
+                            { settingName: 'testRequest', settingValue: isProduction ? 'false' : 'true' }
+                        ]
                     }
                 }
             }
         };
         const xmlBody = builder.build(payload);
 
-        const authorizeNetUrl = 'https://apitest.authorize.net/xml/v1/request.api';
+        // Use production or sandbox endpoint based on environment
+        const authorizeNetUrl = isProduction 
+            ? 'https://api.authorize.net/xml/v1/request.api'
+            : 'https://apitest.authorize.net/xml/v1/request.api';
         const authNetResponse = await fetch(authorizeNetUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/xml', 'Accept': 'application/xml' },
             body: xmlBody
         });
+        
+        console.log(`Authorize.net ${isProduction ? 'PRODUCTION' : 'SANDBOX'} response status:`, authNetResponse.status);
+        
         const responseText = await authNetResponse.text();
 
         const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: true });
@@ -84,10 +117,38 @@ export default async function handler(req, res) {
         const txr = parsed?.createTransactionResponse?.transactionResponse;
         const ok = messages?.resultCode === 'Ok' && txr?.responseCode === '1';
         if (ok) {
-            return res.status(200).json({ success: true, transactionId: txr.transId, message: txr?.messages?.message?.description || 'Approved', authCode: txr.authCode, amount });
+            // Log successful transaction (without sensitive data)
+            console.log(`✅ ${isProduction ? 'PRODUCTION' : 'SANDBOX'} Transaction Approved:`, {
+                transactionId: txr.transId,
+                amount: amount,
+                authCode: txr.authCode,
+                environment: isProduction ? 'PRODUCTION' : 'SANDBOX'
+            });
+            
+            return res.status(200).json({ 
+                success: true, 
+                transactionId: txr.transId, 
+                message: txr?.messages?.message?.description || 'Approved', 
+                authCode: txr.authCode, 
+                amount,
+                environment: isProduction ? 'production' : 'sandbox'
+            });
         }
+        
+        // Log failed transaction
         const errorText = txr?.errors?.error?.errorText || messages?.message?.text || 'Transaction failed';
-        return res.status(400).json({ success: false, error: errorText, raw: parsed });
+        console.log(`❌ ${isProduction ? 'PRODUCTION' : 'SANDBOX'} Transaction Failed:`, {
+            error: errorText,
+            amount: amount,
+            environment: isProduction ? 'PRODUCTION' : 'SANDBOX'
+        });
+        
+        return res.status(400).json({ 
+            success: false, 
+            error: errorText, 
+            raw: parsed,
+            environment: isProduction ? 'production' : 'sandbox'
+        });
     } catch (error) {
         return res.status(500).json({ success: false, error: 'Internal server error: ' + error.message });
     }

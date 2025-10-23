@@ -24,6 +24,17 @@ export default async function handler(req, res) {
   try {
     const { recipientEmail, subject, message, quoteData } = req.body;
 
+    // Debug logging
+    console.log('Email request received:', {
+      recipientEmail,
+      subject,
+      message: message ? message.substring(0, 100) + '...' : 'No message',
+      quoteDataKeys: quoteData ? Object.keys(quoteData) : 'No quoteData',
+      servicesCount: quoteData?.services ? quoteData.services.length : 0,
+      servicesSample: quoteData?.services ? quoteData.services[0] : 'No services',
+      allServices: quoteData?.services ? quoteData.services : 'No services array'
+    });
+
     // Validate required fields
     if (!recipientEmail || !quoteData) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -119,23 +130,45 @@ function generateEmailContent(quoteData, additionalMessage) {
   `;
 
   // Add service rows
-  services.forEach(service => {
-    const serviceName = service.productName || 'Service';
-    const description = service.description || '';
-    const quantity = service.quantity || '1';
-    const unitCost = service.unitCost || '0';
-    const subtotal = service.subtotal || '0';
-    
+  if (services && services.length > 0) {
+    console.log('Processing services for email:', services);
+    services.forEach((service, index) => {
+      // Handle field names with index (productName0, productName1, etc.)
+      const serviceName = service[`productName${index}`] || service.productName || 'Service';
+      const description = service[`description${index}`] || service.description || '';
+      const quantity = service[`quantity${index}`] || service.quantity || '1';
+      const unitCost = service[`unitCost${index}`] || service.unitCost || '0';
+      
+      // Calculate subtotal if not provided
+      const subtotal = service[`subtotal${index}`] || service.subtotal || (parseFloat(quantity) * parseFloat(unitCost)).toFixed(2);
+      
+      console.log(`Service ${index}:`, {
+        serviceName,
+        description,
+        quantity,
+        unitCost,
+        subtotal,
+        rawService: service
+      });
+      
+      html += `
+        <tr>
+          <td>${serviceName}</td>
+          <td>${description}</td>
+          <td>${quantity}</td>
+          <td>$${parseFloat(unitCost).toFixed(2)}</td>
+          <td>$${parseFloat(subtotal).toFixed(2)}</td>
+        </tr>
+      `;
+    });
+  } else {
+    console.log('No services found for email');
     html += `
       <tr>
-        <td>${serviceName}</td>
-        <td>${description}</td>
-        <td>${quantity}</td>
-        <td>$${parseFloat(unitCost).toFixed(2)}</td>
-        <td>$${parseFloat(subtotal).toFixed(2)}</td>
+        <td colspan="5" style="text-align: center; color: #666;">No services specified</td>
       </tr>
     `;
-  });
+  }
 
   html += `
                 </tbody>
@@ -190,13 +223,22 @@ function generatePaymentLink(quoteData) {
   params.append('zip', zip || '');
   
   // Add services
-  services.forEach((service, index) => {
-    params.append(`productName${index}`, service.productName || '');
-    params.append(`quantity${index}`, service.quantity || '1');
-    params.append(`description${index}`, service.description || '');
-    params.append(`unitCost${index}`, service.unitCost || '0');
-    params.append(`subtotal${index}`, service.subtotal || '0');
-  });
+  if (services && services.length > 0) {
+    services.forEach((service, index) => {
+      // Handle field names with index (productName0, productName1, etc.)
+      const serviceName = service[`productName${index}`] || service.productName || '';
+      const description = service[`description${index}`] || service.description || '';
+      const quantity = service[`quantity${index}`] || service.quantity || '1';
+      const unitCost = service[`unitCost${index}`] || service.unitCost || '0';
+      const subtotal = service[`subtotal${index}`] || service.subtotal || (parseFloat(quantity) * parseFloat(unitCost)).toFixed(2);
+      
+      params.append(`productName${index}`, serviceName);
+      params.append(`quantity${index}`, quantity);
+      params.append(`description${index}`, description);
+      params.append(`unitCost${index}`, unitCost);
+      params.append(`subtotal${index}`, subtotal);
+    });
+  }
   
   return `${baseUrl}?${params.toString()}`;
 }

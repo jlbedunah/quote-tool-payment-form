@@ -760,6 +760,14 @@
                 // Add total
                 emailData.quoteData.total = document.getElementById('grandTotal').textContent;
                 
+                // Debug logging
+                console.log('Sending email data:', {
+                    recipientEmail: emailData.recipientEmail,
+                    servicesCount: emailData.quoteData.services.length,
+                    servicesSample: emailData.quoteData.services[0],
+                    total: emailData.quoteData.total
+                });
+                
                 // Send to serverless function with bypass token
                 const response = await fetch('/api/send-quote-email', {
                     method: 'POST',

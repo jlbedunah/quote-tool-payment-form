@@ -443,7 +443,17 @@
                 let summaryHTML = '';
                 const lineItems = []; // Array to hold line item objects
 
+                console.log('URL Params:', urlParams.toString());
+                console.log('Checking for services...');
+
                 while (urlParams.has(`productName${serviceIndex}`)) {
+                    console.log(`Processing service ${serviceIndex}:`, {
+                        serviceName: urlParams.get(`productName${serviceIndex}`),
+                        quantity: urlParams.get(`quantity${serviceIndex}`),
+                        description: urlParams.get(`description${serviceIndex}`),
+                        unitCost: urlParams.get(`unitCost${serviceIndex}`),
+                        subtotal: urlParams.get(`subtotal${serviceIndex}`)
+                    });
                     const serviceName = urlParams.get(`productName${serviceIndex}`);
                     const quantity = urlParams.get(`quantity${serviceIndex}`);
                     const description = urlParams.get(`description${serviceIndex}`);
@@ -476,6 +486,13 @@
                     }
                     serviceIndex++;
                 }
+
+                console.log('Final summary:', {
+                    totalServices: serviceIndex,
+                    total: total.toFixed(2),
+                    lineItemsCount: lineItems.length,
+                    summaryHTML: summaryHTML
+                });
 
                 quoteSummary.innerHTML = summaryHTML;
                 totalAmount.textContent = `$${total.toFixed(2)}`;
