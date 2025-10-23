@@ -151,21 +151,21 @@
                                            autocomplete="off" placeholder="Type to search services...">
                                     <div id="serviceDropdown0" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                         <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="219">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19">
                                                 <div class="font-medium">Catch-up Bookkeeping</div>
-                                                <div class="text-sm text-gray-500">$219</div>
+                                                <div class="text-sm text-gray-500">$2.19</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="799">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99">
                                                 <div class="font-medium">Tax Return (LLC)</div>
-                                                <div class="text-sm text-gray-500">$799</div>
+                                                <div class="text-sm text-gray-500">$1.99</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="799">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01">
                                                 <div class="font-medium">Tax Return (S-Corp)</div>
-                                                <div class="text-sm text-gray-500">$799</div>
+                                                <div class="text-sm text-gray-500">$2.01</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19">
                                                 <div class="font-medium">Monthly Bookkeeping Subscription</div>
-                                                <div class="text-sm text-gray-500">Custom pricing</div>
+                                                <div class="text-sm text-gray-500">$2.19</div>
                                             </div>
                                             <div class="border-t border-gray-200 mt-2 pt-2">
                                                 <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
@@ -348,22 +348,22 @@
                                    autocomplete="off" placeholder="Type to search services...">
                             <div id="serviceDropdown${rowCount}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                 <div class="p-2">
-                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="219">
-                                        <div class="font-medium">Catch-up Bookkeeping</div>
-                                        <div class="text-sm text-gray-500">$219</div>
-                                    </div>
-                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="799">
-                                        <div class="font-medium">Tax Return (LLC)</div>
-                                        <div class="text-sm text-gray-500">$799</div>
-                                    </div>
-                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="799">
-                                        <div class="font-medium">Tax Return (S-Corp)</div>
-                                        <div class="text-sm text-gray-500">$799</div>
-                                    </div>
-                                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="">
-                                        <div class="font-medium">Monthly Bookkeeping Subscription</div>
-                                        <div class="text-sm text-gray-500">Custom pricing</div>
-                                    </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19">
+                                                <div class="font-medium">Catch-up Bookkeeping</div>
+                                                <div class="text-sm text-gray-500">$2.19</div>
+                                            </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99">
+                                                <div class="font-medium">Tax Return (LLC)</div>
+                                                <div class="text-sm text-gray-500">$1.99</div>
+                                            </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01">
+                                                <div class="font-medium">Tax Return (S-Corp)</div>
+                                                <div class="text-sm text-gray-500">$2.01</div>
+                                            </div>
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19">
+                                                <div class="font-medium">Monthly Bookkeeping Subscription</div>
+                                                <div class="text-sm text-gray-500">$2.19</div>
+                                            </div>
                                     <div class="border-t border-gray-200 mt-2 pt-2">
                                         <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
                                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -759,14 +759,6 @@
                 
                 // Add total
                 emailData.quoteData.total = document.getElementById('grandTotal').textContent;
-                
-                // Debug logging
-                console.log('Sending email data:', {
-                    recipientEmail: emailData.recipientEmail,
-                    servicesCount: emailData.quoteData.services.length,
-                    servicesSample: emailData.quoteData.services[0],
-                    total: emailData.quoteData.total
-                });
                 
                 // Send to serverless function with bypass token
                 const response = await fetch('/api/send-quote-email', {
