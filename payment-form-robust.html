@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment Form - Quote Tool</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8ZN40WHZ74"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-8ZN40WHZ74');
+    </script>
+    
+    <!-- Hyros Tracking Script -->
+    <script>
+    var head = document.head;
+    var script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = "https://t.mybookkeepers.com/v1/lst/universal-script?ph=cfa99e7cf0bfaa3f377a76c9efca19d672fdc7eab55b71a9f40e80623231ee9d&tag=!clicked&ref_url=" + encodeURI(document.URL) ;
+    head.appendChild(script);
+    </script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -409,37 +428,44 @@
             }
 
             function showSuccess(result) {
-                // Remove any existing error messages
-                const existingError = document.querySelector('.error-message');
-                if (existingError) {
-                    existingError.remove();
-                }
+                // Build success page URL with transaction details
+                const successUrl = buildSuccessUrl(result);
+                
+                // Redirect to success page
+                window.location.href = successUrl;
+            }
 
-                const messageContainer = document.getElementById('messageContainer');
-                if (!messageContainer) {
-                    console.error('Message container not found');
-                    alert('Payment successful! Transaction ID: ' + (result.transactionId || 'N/A'));
-                    return;
-                }
+            function buildSuccessUrl(result) {
+                const baseUrl = 'payment-success.html';
+                const params = new URLSearchParams();
                 
-                messageContainer.classList.remove('hidden', 'bg-red-100', 'text-red-800');
-                messageContainer.classList.add('bg-green-100', 'text-green-800');
-                messageContainer.innerHTML = `
-                    <p class="font-semibold text-lg">Payment Approved!</p>
-                    <p>Transaction ID: ${result.transactionId || 'N/A'}</p>
-                    <p>Amount: $${result.amount || 'N/A'}</p>
-                    <p>Message: ${result.message || 'Your payment was successful.'}</p>
-                    <button onclick="window.location.href='quote-tool.html'" 
-                            class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                        Return to Quote Tool
-                    </button>
-                `;
-                messageContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Add transaction details
+                if (result.transactionId) params.append('transactionId', result.transactionId);
+                if (result.amount) params.append('amount', result.amount);
+                if (result.message) params.append('message', result.message);
                 
-                const paymentForm = document.getElementById('paymentForm');
-                if (paymentForm) {
-                    paymentForm.style.display = 'none'; // Hide the form
-                }
+                // Add customer details from form
+                const firstName = document.getElementById('firstName')?.value;
+                const lastName = document.getElementById('lastName')?.value;
+                const email = document.getElementById('email')?.value;
+                
+                if (firstName) params.append('firstName', firstName);
+                if (lastName) params.append('lastName', lastName);
+                if (email) params.append('email', email);
+                
+                // Add service details
+                const serviceRows = document.querySelectorAll('.service-row');
+                serviceRows.forEach((row, index) => {
+                    const productName = row.querySelector('.service-name')?.value;
+                    const quantity = row.querySelector('.quantity')?.value;
+                    const unitPrice = row.querySelector('.unit-price')?.value;
+                    
+                    if (productName) params.append(`productName${index}`, productName);
+                    if (quantity) params.append(`quantity${index}`, quantity);
+                    if (unitPrice) params.append(`unitPrice${index}`, unitPrice);
+                });
+                
+                return `${baseUrl}?${params.toString()}`;
             }
 
             function populateCustomerInfo(urlParams) {
