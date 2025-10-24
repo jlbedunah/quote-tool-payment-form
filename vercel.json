@@ -4,14 +4,6 @@
   "buildCommand": "echo 'No build required'",
   "routes": [
     {
-      "src": "/api/webhook-handler",
-      "dest": "/api/webhook-handler.js"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
       "src": "/payment-success",
       "dest": "/payment-success.html"
     },
