@@ -23,3 +23,4 @@ echo "Alternative: You can also set these in the Vercel Dashboard:"
 echo "- Go to your project settings"
 echo "- Navigate to Environment Variables"
 echo "- Add the three variables above"
+
