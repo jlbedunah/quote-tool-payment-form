@@ -54,17 +54,16 @@ export default async function handler(req, res) {
                 // Generate invoice number (store it to return in response)
                 const invoiceNumber = `INV-${Date.now()}`;
 
-                // Prepare customer data (Authorize.net allows optional customer section)
-                const customerData = {};
+                // Prepare optional customer ID (alphanumeric, max 20 chars per Authorize.net schema)
+                let customerId = null;
                 if (email) {
-                    customerData.email = email;
-                    const sanitizedId = email.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '');
-                    if (sanitizedId) {
-                        customerData.id = sanitizedId.slice(0, 20);
+                    const localPart = (email.split('@')[0] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    if (localPart) {
+                        customerId = localPart.slice(0, 20);
                     }
                 }
 
-                // Build XML payload
+                // Build XML payload with customer email so it appears in Authorize.net Customer Details
                 const builder = new XMLBuilder({ ignoreAttributes: false });
                 const payload = {
                     createTransactionRequest: {
@@ -90,7 +89,12 @@ export default async function handler(req, res) {
                             }))
                         }
                     } : {}),
-                    ...(Object.keys(customerData).length > 0 ? { customer: customerData } : {}),
+                    ...(email ? {
+                        customer: {
+                            ...(customerId ? { id: customerId } : {}),
+                            email
+                        }
+                    } : {}),
                     billTo: {
                         firstName, lastName, company: companyName || '', address: address1,
                         city, state, zip, country: country || 'US', email
@@ -140,6 +144,15 @@ export default async function handler(req, res) {
 
         const messages = parsed?.createTransactionResponse?.messages;
         const txr = parsed?.createTransactionResponse?.transactionResponse;
+
+        // Capture top-level error response (when Authorize.net returns ErrorResponse instead of createTransactionResponse)
+        const topLevelError = parsed?.ErrorResponse?.messages?.message;
+        const topLevelErrorText = Array.isArray(topLevelError)
+            ? topLevelError[0]?.text || topLevelError[0]?.description
+            : topLevelError?.text || topLevelError?.description;
+        const topLevelErrorCode = Array.isArray(topLevelError)
+            ? topLevelError[0]?.code
+            : topLevelError?.code;
         
         // Debug logging
         console.log('Parsed response structure:', JSON.stringify({
@@ -208,6 +221,7 @@ export default async function handler(req, res) {
                          (Array.isArray(txr?.errors?.error) ? txr.errors.error[0]?.errorText : null) ||
                          messages?.message?.text || 
                          (Array.isArray(messages?.message) ? messages.message[0]?.text : null) ||
+                         topLevelErrorText ||
                          'Transaction failed';
         const errorIndicatesSuccess = errorText && errorText.toLowerCase().includes('successful');
         
@@ -248,6 +262,7 @@ export default async function handler(req, res) {
         // Log failed transaction
         console.log(`❌ ${isProduction ? 'PRODUCTION' : 'SANDBOX'} Transaction Failed:`, {
             error: errorText,
+            errorCode: topLevelErrorCode || txr?.errors?.error?.errorCode,
             amount: amount,
             environment: isProduction ? 'PRODUCTION' : 'SANDBOX',
             responseCode: txr?.responseCode,
@@ -257,6 +272,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ 
             success: false, 
             error: errorText, 
+            errorCode: topLevelErrorCode || txr?.errors?.error?.errorCode,
             raw: parsed,
             environment: isProduction ? 'production' : 'sandbox'
         });
