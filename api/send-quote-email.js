@@ -204,8 +204,18 @@ function generateEmailContent(quoteData, additionalMessage) {
 function generatePaymentLink(quoteData) {
   const { firstName, lastName, companyName, email, phone, address1, address2, city, state, zip, services } = quoteData;
   
-          // Base URL for the payment form
-          const baseUrl = 'https://quotes.mybookkeepers.com/payment-form-robust.html';
+  // Detect environment (dev vs production)
+  // In dev: NODE_ENV is not 'production' and we're likely running on localhost
+  // In production: NODE_ENV is 'production' or VERCEL_ENV is 'production'
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+  
+  // Use localhost for dev, production URL for production
+  const baseUrl = isProduction 
+    ? 'https://quotes.mybookkeepers.com/payment-form-robust.html'
+    : 'http://localhost:3000/payment-form-robust.html';
+  
+  console.log('Payment link environment:', isProduction ? 'PRODUCTION' : 'DEV');
+  console.log('Payment link URL:', baseUrl);
   
   // Build query parameters
   const params = new URLSearchParams();

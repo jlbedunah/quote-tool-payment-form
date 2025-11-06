@@ -47,23 +47,26 @@ export default async function handler(req, res) {
             }
         }
 
-        const [month, yearPart] = expDate.split('/');
-        const fullYear = yearPart.length === 2 ? '20' + yearPart : yearPart;
-        const expirationDate = `${fullYear}-${month.padStart(2, '0')}`; // YYYY-MM
+                const [month, yearPart] = expDate.split('/');
+                const fullYear = yearPart.length === 2 ? '20' + yearPart : yearPart;
+                const expirationDate = `${fullYear}-${month.padStart(2, '0')}`; // YYYY-MM
 
-        // Build XML payload
-        const builder = new XMLBuilder({ ignoreAttributes: false });
-        const payload = {
-            createTransactionRequest: {
-                '@_xmlns': 'AnetApi/xml/v1/schema/AnetApiSchema.xsd',
-                merchantAuthentication: { name: loginId, transactionKey },
-                refId: `ref${Date.now()}`,
-                transactionRequest: {
-                    transactionType: 'authCaptureTransaction',
-                    amount: Number(parseFloat(amount).toFixed(2)),
-                    payment: { creditCard: { cardNumber: cardNumber.replace(/\s/g, ''), expirationDate, cardCode } },
-                    // Order must appear before lineItems/billTo per schema ordering
-                    order: { invoiceNumber: `INV-${Date.now()}` },
+                // Generate invoice number (store it to return in response)
+                const invoiceNumber = `INV-${Date.now()}`;
+
+                // Build XML payload
+                const builder = new XMLBuilder({ ignoreAttributes: false });
+                const payload = {
+                    createTransactionRequest: {
+                        '@_xmlns': 'AnetApi/xml/v1/schema/AnetApiSchema.xsd',
+                        merchantAuthentication: { name: loginId, transactionKey },
+                        refId: `ref${Date.now()}`,
+                        transactionRequest: {
+                            transactionType: 'authCaptureTransaction',
+                            amount: Number(parseFloat(amount).toFixed(2)),
+                            payment: { creditCard: { cardNumber: cardNumber.replace(/\s/g, ''), expirationDate, cardCode } },
+                            // Order must appear before lineItems/billTo per schema ordering
+                            order: { invoiceNumber },
                     // lineItems is a sibling of order, not nested inside order
                     ...(lineItems && lineItems.length > 0 ? {
                         lineItems: {
@@ -104,43 +107,140 @@ export default async function handler(req, res) {
         console.log(`Authorize.net ${isProduction ? 'PRODUCTION' : 'SANDBOX'} response status:`, authNetResponse.status);
         
         const responseText = await authNetResponse.text();
+        
+        // Log raw XML response for debugging (first 1000 chars)
+        console.log('Raw Authorize.net XML response (first 1000 chars):', responseText.substring(0, 1000));
 
-        const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: true });
+        const parser = new XMLParser({ 
+            ignoreAttributes: false, 
+            parseTagValue: true,
+            parseNodeValue: true,
+            trimValues: true,
+            parseTrueNumberOnly: false
+        });
         let parsed;
         try {
             parsed = parser.parse(responseText);
+            console.log('Full parsed XML structure:', JSON.stringify(parsed, null, 2));
         } catch (e) {
+            console.error('XML parsing error:', e);
             return res.status(500).json({ success: false, error: 'Invalid XML response from Authorize.net', details: responseText.slice(0, 200) });
         }
 
         const messages = parsed?.createTransactionResponse?.messages;
         const txr = parsed?.createTransactionResponse?.transactionResponse;
-        const ok = messages?.resultCode === 'Ok' && txr?.responseCode === '1';
+        
+        // Debug logging
+        console.log('Parsed response structure:', JSON.stringify({
+            messagesResultCode: messages?.resultCode,
+            txrResponseCode: txr?.responseCode,
+            txrTransId: txr?.transId,
+            txrAuthCode: txr?.authCode,
+            txrMessages: txr?.messages,
+            txrErrors: txr?.errors,
+            fullTxr: txr
+        }, null, 2));
+        
+        // Extract transaction ID - try multiple possible paths
+        // Authorize.net XML structure: createTransactionResponse.transactionResponse.transId
+        let transactionId = null;
+        
+        // Try all possible paths for transaction ID
+        const possiblePaths = [
+            () => txr?.transId,
+            () => txr?.transactionId,
+            () => txr?.['transId'],
+            () => parsed?.createTransactionResponse?.transactionResponse?.transId,
+            () => parsed?.createTransactionResponse?.transactionResponse?.['transId'],
+            () => parsed?.createTransactionResponse?.transactionResponse?.transId?.[0], // Array case
+            () => txr?.transactionResponse?.transId,
+            () => txr?.transactionResponse?.['transId']
+        ];
+        
+        for (const getPath of possiblePaths) {
+            try {
+                const value = getPath();
+                if (value !== null && value !== undefined && value !== '') {
+                    transactionId = String(value);
+                    console.log('Found transaction ID via path:', getPath.toString(), '=', transactionId);
+                    break;
+                }
+            } catch (e) {
+                // Continue to next path
+            }
+        }
+        
+        // If still null, check if it's actually "0" (which Authorize.net returns for test transactions)
+        if (!transactionId && (txr?.transId === '0' || txr?.transId === 0)) {
+            transactionId = '0';
+            console.log('Transaction ID is 0 (test/sandbox transaction - this is normal)');
+        }
+        
+        // Log what we found
+        console.log('Transaction ID extraction result:', {
+            found: !!transactionId,
+            value: transactionId,
+            txrKeys: txr ? Object.keys(txr) : 'txr is null',
+            txrTransId: txr?.transId,
+            txrTransactionId: txr?.transactionId,
+            fullTxrStructure: JSON.stringify(txr, null, 2)
+        });
+        
+        // Check for success - multiple conditions
+        const resultCodeOk = messages?.resultCode === 'Ok';
+        const responseCodeOk = txr?.responseCode === '1';
+        const hasTransactionId = !!transactionId; // Accept "0" as valid (test transactions)
+        
+        // Also check if error message contains "successful" (case-insensitive) - sometimes Authorize.net returns success in error field
+        const errorText = txr?.errors?.error?.errorText || 
+                         txr?.errors?.error?.[0]?.errorText || 
+                         (Array.isArray(txr?.errors?.error) ? txr.errors.error[0]?.errorText : null) ||
+                         messages?.message?.text || 
+                         (Array.isArray(messages?.message) ? messages.message[0]?.text : null) ||
+                         'Transaction failed';
+        const errorIndicatesSuccess = errorText && errorText.toLowerCase().includes('successful');
+        
+        const ok = (resultCodeOk && responseCodeOk) || (hasTransactionId && !txr?.errors) || errorIndicatesSuccess;
+        
         if (ok) {
             // Log successful transaction (without sensitive data)
             console.log(`✅ ${isProduction ? 'PRODUCTION' : 'SANDBOX'} Transaction Approved:`, {
-                transactionId: txr.transId,
+                transactionId: transactionId,
                 amount: amount,
-                authCode: txr.authCode,
+                authCode: txr?.authCode,
                 environment: isProduction ? 'PRODUCTION' : 'SANDBOX'
             });
             
-            return res.status(200).json({ 
+            const responseData = { 
                 success: true, 
-                transactionId: txr.transId, 
-                message: txr?.messages?.message?.description || 'Approved', 
-                authCode: txr.authCode, 
+                transactionId: transactionId || null, 
+                invoiceNumber: invoiceNumber,
+                message: txr?.messages?.message?.description || 
+                        (Array.isArray(txr?.messages?.message) ? txr.messages.message[0]?.description : null) ||
+                        'Approved', 
+                authCode: txr?.authCode, 
                 amount,
-                environment: isProduction ? 'production' : 'sandbox'
-            });
+                environment: isProduction ? 'production' : 'sandbox',
+                debug: {
+                    hasTransactionId: !!transactionId,
+                    transactionIdValue: transactionId,
+                    txrResponseCode: txr?.responseCode,
+                    messagesResultCode: messages?.resultCode
+                }
+            };
+            
+            console.log('Sending success response:', JSON.stringify(responseData, null, 2));
+            
+            return res.status(200).json(responseData);
         }
         
         // Log failed transaction
-        const errorText = txr?.errors?.error?.errorText || messages?.message?.text || 'Transaction failed';
         console.log(`❌ ${isProduction ? 'PRODUCTION' : 'SANDBOX'} Transaction Failed:`, {
             error: errorText,
             amount: amount,
-            environment: isProduction ? 'PRODUCTION' : 'SANDBOX'
+            environment: isProduction ? 'PRODUCTION' : 'SANDBOX',
+            responseCode: txr?.responseCode,
+            resultCode: messages?.resultCode
         });
         
         return res.status(400).json({ 

@@ -1,15 +1,14 @@
 {
-  "version": 2,
-  "outputDirectory": ".",
-  "buildCommand": "echo 'No build required'",
-  "routes": [
+  "installCommand": "npm install",
+  "outputDirectory": "public",
+  "rewrites": [
     {
-      "src": "/payment-success",
-      "dest": "/payment-success.html"
+      "source": "/",
+      "destination": "/index.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/payment-success",
+      "destination": "/payment-success.html"
     }
   ]
 }
