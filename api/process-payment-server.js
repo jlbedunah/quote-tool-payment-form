@@ -54,6 +54,16 @@ export default async function handler(req, res) {
                 // Generate invoice number (store it to return in response)
                 const invoiceNumber = `INV-${Date.now()}`;
 
+                // Prepare customer data (Authorize.net allows optional customer section)
+                const customerData = {};
+                if (email) {
+                    customerData.email = email;
+                    const sanitizedId = email.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '');
+                    if (sanitizedId) {
+                        customerData.id = sanitizedId.slice(0, 20);
+                    }
+                }
+
                 // Build XML payload
                 const builder = new XMLBuilder({ ignoreAttributes: false });
                 const payload = {
@@ -80,6 +90,7 @@ export default async function handler(req, res) {
                             }))
                         }
                     } : {}),
+                    ...(Object.keys(customerData).length > 0 ? { customer: customerData } : {}),
                     billTo: {
                         firstName, lastName, company: companyName || '', address: address1,
                         city, state, zip, country: country || 'US', email
