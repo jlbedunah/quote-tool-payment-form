@@ -115,9 +115,14 @@
                 <div id="quoteSummary" class="space-y-4 text-gray-700">
                     <!-- Quote details will be populated here by JavaScript -->
                 </div>
-                <div class="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <span class="text-xl font-bold text-gray-800">Total:</span>
-                    <span id="totalAmount" class="text-2xl font-extrabold" style="color: #CA1824;">$0.00</span>
+                <div class="mt-6 pt-4 border-t border-gray-200 space-y-2 text-right">
+                    <div>
+                        <span class="text-xl font-bold text-gray-800">Due Today:</span>
+                        <span id="dueTodayAmount" class="text-2xl font-extrabold ml-2" style="color: #CA1824;">$0.00</span>
+                    </div>
+                    <div id="subscriptionSummaryRow" class="text-sm text-gray-600 hidden">
+                        Monthly Subscription: <span class="font-semibold" id="subscriptionSummaryAmount">$0.00</span> per month
+                    </div>
                 </div>
             </div>
 
@@ -215,7 +220,7 @@
                                    placeholder="MM/YY" maxlength="5">
                         </div>
                         <div>
-                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Amount Due Today *</label>
                             <input type="text" id="amount" name="amount" required readonly
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold">
                         </div>
@@ -225,6 +230,9 @@
                 <!-- Line Items Data Container (hidden) -->
                 <div id="lineItemsContainer" style="display: none;">
                     <!-- Line items will be stored here as JSON -->
+                </div>
+                <div id="subscriptionItemsContainer" style="display: none;">
+                    <!-- Subscription items metadata will be stored here as JSON -->
                 </div>
 
                 <!-- Submit Section -->
@@ -339,14 +347,29 @@
                         email: document.getElementById('email').value,
                         amount: document.getElementById('amount').value
                     };
+                    formData.oneTimeAmount = formData.amount;
                     
                     // Collect line items (already stored in lineItemsContainer as JSON)
                     const lineItemsJson = document.getElementById('lineItemsContainer').textContent;
-                    if (lineItemsJson) {
-                        formData.lineItems = JSON.parse(lineItemsJson);
+                    const allLineItems = lineItemsJson ? JSON.parse(lineItemsJson) : [];
+                    formData.allLineItems = allLineItems;
+                    formData.lineItems = allLineItems.filter(item => !item.isSubscription);
+                    
+                    const subscriptionItemsJson = document.getElementById('subscriptionItemsContainer').textContent;
+                    if (subscriptionItemsJson) {
+                        try {
+                            formData.subscriptionItems = JSON.parse(subscriptionItemsJson);
+                        } catch (e) {
+                            console.error('Error parsing subscription items JSON:', e);
+                            formData.subscriptionItems = [];
+                        }
                     } else {
-                        formData.lineItems = [];
+                        formData.subscriptionItems = [];
                     }
+                    
+                    formData.subscriptionMonthlyTotal = formData.subscriptionItems.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0).toFixed(2);
+                    formData.hasSubscription = formData.subscriptionItems.length > 0;
+                    formData.oneTimeLineItems = formData.lineItems;
 
                     console.log('Sending payment data to server:', {
                         ...formData,
@@ -366,7 +389,8 @@
                         state: !!formData.state,
                         zip: !!formData.zip,
                         email: !!formData.email,
-                        amount: !!formData.amount
+                        amount: formData.amount !== undefined,
+                        hasSubscription: formData.hasSubscription
                     });
 
                     // Send to our server-side API
@@ -408,7 +432,7 @@
                     if (isSuccess) {
                         // Payment successful - redirect immediately
                         console.log('Calling showSuccess with:', result);
-                        showSuccess(result);
+                        showSuccess(result, formData);
                     } else {
                         // Payment failed
                         console.log('Calling showError with:', result.error || result.message);
@@ -445,8 +469,26 @@
                 messageContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
-            function showSuccess(result) {
+            function showSuccess(result, formPayload) {
                 console.log('Payment successful, redirecting to success page:', result);
+
+                try {
+                    const storedPayload = {
+                        transactionId: result.transactionId || null,
+                        invoiceNumber: result.invoiceNumber || null,
+                        authCode: result.authCode || null,
+                        amount: result.amount || formPayload?.oneTimeAmount || document.getElementById('amount')?.value || null,
+                        message: result.message || null,
+                        hasSubscription: result.hasSubscription ?? formPayload?.hasSubscription ?? false,
+                        subscriptionMonthlyTotal: result.subscriptionMonthlyTotal ?? formPayload?.subscriptionMonthlyTotal ?? null,
+                        subscriptionResults: Array.isArray(result.subscriptionResults) ? result.subscriptionResults : [],
+                        lineItems: Array.isArray(formPayload?.allLineItems) ? formPayload.allLineItems : Array.isArray(formPayload?.lineItems) ? formPayload.lineItems : [],
+                        subscriptionItems: Array.isArray(formPayload?.subscriptionItems) ? formPayload.subscriptionItems : []
+                    };
+                    sessionStorage.setItem('paymentResult', JSON.stringify(storedPayload));
+                } catch (storageError) {
+                    console.warn('Unable to store payment result in sessionStorage:', storageError);
+                }
                 
                 // Build success page URL with transaction details
                 const successUrl = buildSuccessUrl(result);
@@ -524,14 +566,19 @@
 
             function populateQuoteSummary(urlParams) {
                 const quoteSummary = document.getElementById('quoteSummary');
-                const totalAmount = document.getElementById('totalAmount');
+                const dueTodayAmount = document.getElementById('dueTodayAmount');
+                const subscriptionSummaryRow = document.getElementById('subscriptionSummaryRow');
+                const subscriptionSummaryAmount = document.getElementById('subscriptionSummaryAmount');
                 const amountInput = document.getElementById('amount');
                 const lineItemsContainer = document.getElementById('lineItemsContainer'); // This will store JSON
+                const subscriptionItemsContainer = document.getElementById('subscriptionItemsContainer');
                 
-                let total = 0;
+                let oneTimeTotal = 0;
+                let subscriptionTotal = 0;
                 let serviceIndex = 0;
                 let summaryHTML = '';
                 const lineItems = []; // Array to hold line item objects
+                const subscriptionItems = [];
 
                 console.log('URL Params:', urlParams.toString());
                 console.log('Checking for services...');
@@ -549,15 +596,26 @@
                     const description = urlParams.get(`description${serviceIndex}`);
                     const unitCost = urlParams.get(`unitCost${serviceIndex}`);
                     const subtotal = urlParams.get(`subtotal${serviceIndex}`);
+                    const isSubscription = urlParams.get(`isSubscription${serviceIndex}`) === 'true';
+                    const subscriptionIntervalParam = urlParams.get(`subscriptionInterval${serviceIndex}`) || 'monthly';
+                    const subscriptionStartDate = urlParams.get(`subscriptionStartDate${serviceIndex}`) || '';
 
                     if (serviceName && quantity && unitCost) {
                         const currentSubtotal = parseFloat(subtotal) || (parseFloat(quantity) * parseFloat(unitCost));
-                        total += currentSubtotal;
+                        
+                        if (isSubscription) {
+                            subscriptionTotal += currentSubtotal;
+                        } else {
+                            oneTimeTotal += currentSubtotal;
+                        }
 
                         summaryHTML += `
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <p class="font-medium">${serviceName} (x${quantity})</p>
+                                    <p class="font-medium">
+                                        ${serviceName} (x${quantity})
+                                        ${isSubscription ? '<span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">Subscription</span>' : ''}
+                                    </p>
                                     ${description ? `<p class="text-sm text-gray-500">${description}</p>` : ''}
                                 </div>
                                 <span class="font-semibold">$${currentSubtotal.toFixed(2)}</span>
@@ -565,31 +623,70 @@
                         `;
 
                         // Add to line items array for JSON
+                        const quantityInt = Math.max(1, Math.floor(parseFloat(quantity) || 1));
+                        const unitPriceNumber = Math.max(0.01, parseFloat(unitCost) || 0.01);
+
                         lineItems.push({
                             itemId: (serviceIndex + 1).toString(),
                             name: serviceName,
                             description: description || '',
-                            quantity: Math.max(1, Math.floor(parseFloat(quantity) || 1)),
-                            unitPrice: Math.max(0.01, parseFloat(unitCost) || 0.01),
-                            taxable: false // Assuming not taxable for now
+                            quantity: quantityInt,
+                            unitPrice: unitPriceNumber,
+                            subtotal: currentSubtotal,
+                            taxable: false, // Assuming not taxable for now
+                            isSubscription: isSubscription,
+                            subscriptionInterval: isSubscription ? subscriptionIntervalParam : null
                         });
+
+                        if (isSubscription) {
+                            subscriptionItems.push({
+                                name: serviceName,
+                                description: description || '',
+                                quantity: quantityInt,
+                                unitPrice: unitPriceNumber,
+                                subtotal: currentSubtotal,
+                                interval: subscriptionIntervalParam,
+                                startDate: subscriptionStartDate
+                            });
+                        }
                     }
                     serviceIndex++;
                 }
 
                 console.log('Final summary:', {
                     totalServices: serviceIndex,
-                    total: total.toFixed(2),
+                    oneTimeTotal: oneTimeTotal.toFixed(2),
+                    subscriptionTotal: subscriptionTotal.toFixed(2),
                     lineItemsCount: lineItems.length,
+                    subscriptionItemsCount: subscriptionItems.length,
                     summaryHTML: summaryHTML
                 });
 
                 quoteSummary.innerHTML = summaryHTML;
-                totalAmount.textContent = `$${total.toFixed(2)}`;
-                amountInput.value = total.toFixed(2);
+                
+                if (dueTodayAmount) {
+                    dueTodayAmount.textContent = `$${oneTimeTotal.toFixed(2)}`;
+                }
+                if (subscriptionSummaryAmount) {
+                    subscriptionSummaryAmount.textContent = `$${subscriptionTotal.toFixed(2)}`;
+                }
+                if (subscriptionSummaryRow) {
+                    if (subscriptionTotal > 0) {
+                        subscriptionSummaryRow.classList.remove('hidden');
+                    } else {
+                        subscriptionSummaryRow.classList.add('hidden');
+                    }
+                }
+                
+                if (amountInput) {
+                    amountInput.value = oneTimeTotal.toFixed(2);
+                }
 
                 // Store line items as JSON in the hidden container
                 lineItemsContainer.textContent = JSON.stringify(lineItems);
+                if (subscriptionItemsContainer) {
+                    subscriptionItemsContainer.textContent = JSON.stringify(subscriptionItems);
+                }
             }
         });
     </script>

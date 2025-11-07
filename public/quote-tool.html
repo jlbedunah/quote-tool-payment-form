@@ -170,19 +170,19 @@
                                            autocomplete="off" placeholder="Type to search services...">
                                     <div id="serviceDropdown0" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                         <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19" data-subscription="false" data-interval="">
                                                 <div class="font-medium">Catch-up Bookkeeping</div>
                                                 <div class="text-sm text-gray-500">$2.19</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99" data-subscription="false" data-interval="">
                                                 <div class="font-medium">Tax Return (LLC)</div>
                                                 <div class="text-sm text-gray-500">$1.99</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01" data-subscription="false" data-interval="">
                                                 <div class="font-medium">Tax Return (S-Corp)</div>
                                                 <div class="text-sm text-gray-500">$2.01</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19" data-subscription="true" data-interval="monthly">
                                                 <div class="font-medium">Monthly Bookkeeping Subscription</div>
                                                 <div class="text-sm text-gray-500">$2.19</div>
                                             </div>
@@ -206,7 +206,7 @@
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
                                 <textarea name="description0" rows="2" 
-                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"></textarea>
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 h-[52px] resize-y"></textarea>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
@@ -220,7 +220,16 @@
                                 <input type="text" name="subtotal0" readonly 
                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold">
                             </div>
-                            <div class="lg:col-span-5">
+                            <div class="lg:col-span-3">
+                                <input type="hidden" name="isSubscription0" value="false">
+                                <input type="hidden" name="subscriptionInterval0" value="monthly">
+                                <div class="subscription-info hidden px-4 py-3 border border-purple-200 bg-purple-50 rounded-lg">
+                                    <p class="text-sm text-purple-700 font-semibold">
+                                        This service will be billed <span class="subscription-interval-text">monthly</span>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2">
                                 <button type="button" class="remove-row-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium" 
                                         onclick="removeRow(0)" style="display: none;">
                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,11 +256,19 @@
 
             <!-- Total Section -->
             <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-8 border-b border-gray-200">
-                <div class="text-right">
-                    <div class="text-3xl font-bold text-gray-800">
-                        Total: $<span id="grandTotal" style="color: #CA1824;">0.00</span>
+                <div class="text-right space-y-2">
+                    <div class="text-2xl font-bold text-gray-800">
+                        Due Today: $<span id="oneTimeTotal" style="color: #CA1824;">0.00</span>
+                    </div>
+                    <div id="subscriptionTotalRow" class="text-sm text-gray-700 hidden">
+                        Monthly Subscription: <span class="font-semibold">$<span id="subscriptionTotal">0.00</span></span>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Combined Quote Value (one-time + first month): $<span id="grandTotal">0.00</span>
                     </div>
                 </div>
+                <input type="hidden" id="oneTimeTotalInput" name="oneTimeTotal" value="0.00">
+                <input type="hidden" id="subscriptionTotalInput" name="subscriptionMonthlyTotal" value="0.00">
             </div>
 
             <!-- Action Buttons Section -->
@@ -351,6 +368,89 @@
     <script>
         let rowCount = 1;
 
+        function formatIntervalLabel(interval) {
+            if (!interval) return 'monthly';
+            const normalized = String(interval).toLowerCase();
+            switch (normalized) {
+                case 'monthly':
+                    return 'monthly';
+                case 'quarterly':
+                    return 'quarterly';
+                case 'weekly':
+                    return 'weekly';
+                case 'biweekly':
+                case 'bi-weekly':
+                    return 'bi-weekly';
+                case 'annually':
+                case 'annual':
+                case 'yearly':
+                    return 'annually';
+                default:
+                    return normalized;
+            }
+        }
+
+        function setSubscriptionState(rowIndex, isSubscription, interval) {
+            const row = document.querySelector(`[data-row="${rowIndex}"]`);
+            if (!row) return;
+
+            const flagInput = row.querySelector(`input[name="isSubscription${rowIndex}"]`);
+            const intervalInput = row.querySelector(`input[name="subscriptionInterval${rowIndex}"]`);
+            const infoBox = row.querySelector('.subscription-info');
+            const infoText = row.querySelector('.subscription-interval-text');
+        const quantityInput = row.querySelector(`input[name="quantity${rowIndex}"]`);
+        const subtotalInput = row.querySelector(`input[name="subtotal${rowIndex}"]`);
+
+            if (flagInput) {
+                flagInput.value = isSubscription ? 'true' : 'false';
+            }
+
+            if (intervalInput) {
+                if (interval) {
+                    intervalInput.value = interval;
+                }
+                if (!intervalInput.value) {
+                    intervalInput.value = 'monthly';
+                }
+            }
+
+            if (infoBox) {
+                if (isSubscription) {
+                    const label = formatIntervalLabel(intervalInput ? intervalInput.value : interval);
+                    if (infoText) {
+                        infoText.textContent = label || 'monthly';
+                    }
+                    infoBox.classList.remove('hidden');
+                } else {
+                    infoBox.classList.add('hidden');
+                }
+            }
+
+        if (quantityInput) {
+            if (isSubscription) {
+                const previous = quantityInput.value;
+                if (previous !== '1') {
+                    quantityInput.value = '1';
+                }
+                quantityInput.disabled = true;
+                quantityInput.classList.add('bg-gray-100', 'cursor-not-allowed', 'opacity-75');
+            } else {
+                quantityInput.disabled = false;
+                quantityInput.classList.remove('bg-gray-100', 'cursor-not-allowed', 'opacity-75');
+            }
+        }
+
+        if (isSubscription && quantityInput && subtotalInput) {
+            calculateSubtotal(rowIndex);
+        } else {
+            calculateGrandTotal();
+        }
+    }
+
+    function handleCustomServiceSelection(rowIndex) {
+        setSubscriptionState(rowIndex, false);
+        }
+
         function addServiceRow() {
             const serviceRows = document.getElementById('serviceRows');
             const newRow = document.createElement('div');
@@ -367,19 +467,19 @@
                                    autocomplete="off" placeholder="Type to search services...">
                             <div id="serviceDropdown${rowCount}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                 <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19" data-subscription="false" data-interval="">
                                                 <div class="font-medium">Catch-up Bookkeeping</div>
                                                 <div class="text-sm text-gray-500">$2.19</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99" data-subscription="false" data-interval="">
                                                 <div class="font-medium">Tax Return (LLC)</div>
                                                 <div class="text-sm text-gray-500">$1.99</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01" data-subscription="false" data-interval="">
                                                 <div class="font-medium">Tax Return (S-Corp)</div>
                                                 <div class="text-sm text-gray-500">$2.01</div>
                                             </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19">
+                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19" data-subscription="true" data-interval="monthly">
                                                 <div class="font-medium">Monthly Bookkeeping Subscription</div>
                                                 <div class="text-sm text-gray-500">$2.19</div>
                                             </div>
@@ -403,7 +503,7 @@
                     <div class="lg:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
                         <textarea name="description${rowCount}" rows="2" 
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"></textarea>
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 h-[52px] resize-y"></textarea>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
@@ -417,7 +517,16 @@
                         <input type="text" name="subtotal${rowCount}" readonly 
                                class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold">
                     </div>
-                    <div class="lg:col-span-5">
+                    <div class="lg:col-span-3">
+                        <input type="hidden" name="isSubscription${rowCount}" value="false">
+                        <input type="hidden" name="subscriptionInterval${rowCount}" value="monthly">
+                        <div class="subscription-info hidden px-4 py-3 border border-purple-200 bg-purple-50 rounded-lg">
+                            <p class="text-sm text-purple-700 font-semibold">
+                                This service will be billed <span class="subscription-interval-text">monthly</span>.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
                         <button type="button" class="remove-row-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium" 
                                 onclick="removeRow(${rowCount})">
                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,6 +546,7 @@
             
             // Initialize dropdown functionality for the new row
             initializeServiceDropdown(rowCount - 1);
+            setSubscriptionState(rowCount - 1, false);
         }
 
         function removeRow(rowIndex) {
@@ -470,15 +580,47 @@
         }
 
         function calculateGrandTotal() {
-            let total = 0;
-            const subtotalInputs = document.querySelectorAll('input[name^="subtotal"]');
+            let oneTimeTotal = 0;
+            let subscriptionTotal = 0;
             
-            subtotalInputs.forEach(input => {
-                const value = parseFloat(input.value) || 0;
-                total += value;
+            const rows = document.querySelectorAll('.service-row');
+            rows.forEach(row => {
+                const subtotalInput = row.querySelector('input[name^="subtotal"]');
+                if (!subtotalInput) return;
+                const subtotal = parseFloat(subtotalInput.value) || 0;
+                const rowIndex = row.getAttribute('data-row');
+                const flagInput = rowIndex !== null ? row.querySelector(`input[name="isSubscription${rowIndex}"]`) : null;
+                const isSubscription = flagInput ? flagInput.value === 'true' : false;
+                
+                if (isSubscription) {
+                    subscriptionTotal += subtotal;
+                } else {
+                    oneTimeTotal += subtotal;
+                }
             });
             
-            document.getElementById('grandTotal').textContent = total.toFixed(2);
+            const grandTotal = oneTimeTotal + subscriptionTotal;
+            
+            const oneTimeDisplay = document.getElementById('oneTimeTotal');
+            const subscriptionDisplay = document.getElementById('subscriptionTotal');
+            const grandTotalDisplay = document.getElementById('grandTotal');
+            const subscriptionRow = document.getElementById('subscriptionTotalRow');
+            const oneTimeInput = document.getElementById('oneTimeTotalInput');
+            const subscriptionInput = document.getElementById('subscriptionTotalInput');
+            
+            if (oneTimeDisplay) oneTimeDisplay.textContent = oneTimeTotal.toFixed(2);
+            if (subscriptionDisplay) subscriptionDisplay.textContent = subscriptionTotal.toFixed(2);
+            if (grandTotalDisplay) grandTotalDisplay.textContent = grandTotal.toFixed(2);
+            if (oneTimeInput) oneTimeInput.value = oneTimeTotal.toFixed(2);
+            if (subscriptionInput) subscriptionInput.value = subscriptionTotal.toFixed(2);
+            
+            if (subscriptionRow) {
+                if (subscriptionTotal > 0) {
+                    subscriptionRow.classList.remove('hidden');
+                } else {
+                    subscriptionRow.classList.add('hidden');
+                }
+            }
         }
 
         function buildLink() {
@@ -488,9 +630,16 @@
             
             // Add customer information
             const customerFields = ['firstName', 'lastName', 'companyName', 'email', 'phone', 'address1', 'address2', 'city', 'state', 'zip'];
+            const totalsFields = ['oneTimeTotal', 'subscriptionMonthlyTotal'];
             customerFields.forEach(field => {
                 const value = formData.get(field);
                 if (value) {
+                    params.append(field, value);
+                }
+            });
+            totalsFields.forEach(field => {
+                const value = formData.get(field);
+                if (value !== null && value !== undefined) {
                     params.append(field, value);
                 }
             });
@@ -499,8 +648,22 @@
             const rows = document.querySelectorAll('.service-row');
             rows.forEach((row, index) => {
                 const rowData = row.querySelectorAll('input, textarea');
+                const rowIndexAttr = row.getAttribute('data-row');
                 rowData.forEach(input => {
-                    if (input.value) {
+                    if (input.type === 'hidden') {
+                        if (input.name.startsWith('isSubscription')) {
+                            if (input.value === 'true') {
+                                params.append(input.name, 'true');
+                            }
+                        } else if (input.name.startsWith('subscriptionInterval')) {
+                            const flag = rowIndexAttr !== null ? row.querySelector(`input[name="isSubscription${rowIndexAttr}"]`) : null;
+                            if (flag && flag.value === 'true' && input.value) {
+                                params.append(input.name, input.value);
+                            }
+                        } else if (input.value) {
+                            params.append(input.name, input.value);
+                        }
+                    } else if (input.value) {
                         params.append(input.name, input.value);
                     }
                 });
@@ -589,33 +752,43 @@
             // Filter services as user types
             input.addEventListener('input', function() {
                 filterServices(rowIndex);
+                handleCustomServiceSelection(rowIndex);
             });
             
             // Handle service option clicks
             dropdown.addEventListener('click', function(e) {
-                if (e.target.closest('.service-option')) {
-                    const serviceOption = e.target.closest('.service-option');
-                    const value = serviceOption.getAttribute('data-value');
+                const serviceOption = e.target.closest('.service-option');
+                
+                if (serviceOption) {
+                    const value = serviceOption.getAttribute('data-value') || '';
                     const price = serviceOption.getAttribute('data-price');
+                    const isSubscription = serviceOption.getAttribute('data-subscription') === 'true';
+                    const interval = serviceOption.getAttribute('data-interval') || undefined;
                     
                     input.value = value;
                     dropdown.classList.add('hidden');
                     
-                    // Auto-populate unit cost if price is available
-                    if (price) {
-                        const unitCostInput = input.closest('.service-row').querySelector('input[name^="unitCost"]');
+                    const serviceRow = input.closest('.service-row');
+                    if (serviceRow && price) {
+                        const unitCostInput = serviceRow.querySelector(`input[name="unitCost${rowIndex}"]`);
                         if (unitCostInput) {
                             unitCostInput.value = price;
-                            // Trigger calculation
-                            const rowIndex = input.id.replace('serviceInput', '');
-                            calculateSubtotal(rowIndex);
                         }
+                    }
+                    
+                    setSubscriptionState(rowIndex, isSubscription, interval);
+                    
+                    if (price) {
+                        calculateSubtotal(rowIndex);
+                    } else {
+                        calculateGrandTotal();
                     }
                 } else if (e.target.closest('.add-service-option')) {
                     const customValue = input.value.trim();
                     if (customValue) {
                         input.value = customValue;
                         dropdown.classList.add('hidden');
+                        handleCustomServiceSelection(rowIndex);
                     }
                 }
             });
@@ -694,6 +867,10 @@
                         }
                     });
                     
+                    const isSubscriptionParam = urlParams.get(`isSubscription${serviceIndex}`) === 'true';
+                    const intervalParam = urlParams.get(`subscriptionInterval${serviceIndex}`) || undefined;
+                    setSubscriptionState(serviceIndex, isSubscriptionParam, intervalParam);
+                    
                     serviceIndex++;
                 }
                 
@@ -703,6 +880,7 @@
             
             // Initialize all service dropdowns
             initializeAllDropdowns();
+            calculateGrandTotal();
         });
 
         // Email functionality
@@ -766,8 +944,22 @@
                 rows.forEach((row, index) => {
                     const rowData = row.querySelectorAll('input, textarea');
                     const service = {};
+                    const rowIndexAttr = row.getAttribute('data-row');
                     rowData.forEach(input => {
-                        if (input.value) {
+                        if (input.type === 'hidden') {
+                            if (input.name.startsWith('isSubscription')) {
+                                if (input.value === 'true') {
+                                    service[input.name] = 'true';
+                                }
+                            } else if (input.name.startsWith('subscriptionInterval')) {
+                                const flag = rowIndexAttr !== null ? row.querySelector(`input[name="isSubscription${rowIndexAttr}"]`) : null;
+                                if (flag && flag.value === 'true' && input.value) {
+                                    service[input.name] = input.value;
+                                }
+                            } else if (input.value) {
+                                service[input.name] = input.value;
+                            }
+                        } else if (input.value) {
                             service[input.name] = input.value;
                         }
                     });
@@ -777,7 +969,9 @@
                 });
                 
                 // Add total
-                emailData.quoteData.total = document.getElementById('grandTotal').textContent;
+                emailData.quoteData.oneTimeTotal = document.getElementById('oneTimeTotal')?.textContent || '0.00';
+                emailData.quoteData.subscriptionMonthlyTotal = document.getElementById('subscriptionTotal')?.textContent || '0.00';
+                emailData.quoteData.grandTotal = document.getElementById('grandTotal')?.textContent || '0.00';
                 
                 // Send to serverless function with bypass token
                 const response = await fetch('/api/send-quote-email', {

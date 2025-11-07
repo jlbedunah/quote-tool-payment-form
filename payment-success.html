@@ -102,6 +102,10 @@
                             <span class="text-gray-600">Amount:</span>
                             <span id="transactionAmount" class="font-medium">Loading...</span>
                         </div>
+                        <div id="subscriptionAmountRow" class="flex justify-between hidden">
+                            <span class="text-gray-600">Subscription (Monthly):</span>
+                            <span id="subscriptionAmount" class="font-medium">Loading...</span>
+                        </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Date:</span>
                             <span id="transactionDate" class="font-medium">Loading...</span>
@@ -118,6 +122,14 @@
                     <h3 class="text-lg font-semibold text-gray-700 mb-4">Services Purchased</h3>
                     <div id="servicesList" class="space-y-2">
                         <!-- Services will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Subscription Status -->
+                <div id="subscriptionStatus" class="bg-green-50 rounded-lg p-6 mb-6 text-left hidden">
+                    <h3 id="subscriptionStatusTitle" class="text-lg font-semibold text-gray-700 mb-4">Subscription Enrollment</h3>
+                    <div id="subscriptionStatusList" class="space-y-2">
+                        <!-- Subscription status items populated by JavaScript -->
                     </div>
                 </div>
 
@@ -171,20 +183,45 @@
     </div>
 
     <script>
-        // Parse URL parameters to get transaction details
         function getUrlParameter(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
         }
 
-        // Populate transaction details from URL parameters
-        function populateTransactionDetails() {
-            const invoiceNumber = getUrlParameter('invoiceNumber') || 'N/A';
-            const transactionId = getUrlParameter('transactionId') || 'N/A';
-            const amount = getUrlParameter('amount') || 'N/A';
-            const firstName = getUrlParameter('firstName') || '';
-            const lastName = getUrlParameter('lastName') || '';
+        function formatCurrency(value) {
+            const numeric = Number(value);
+            if (Number.isFinite(numeric)) {
+                return `$${numeric.toFixed(2)}`;
+            }
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (trimmed.length === 0) return '$0.00';
+                if (trimmed.toLowerCase() === 'n/a') return 'N/A';
+                return trimmed.startsWith('$') ? trimmed : `$${trimmed}`;
+            }
+            return '$0.00';
+        }
+
+        function getStoredPaymentResult() {
+            try {
+                const raw = sessionStorage.getItem('paymentResult');
+                if (!raw) return null;
+                sessionStorage.removeItem('paymentResult');
+                return JSON.parse(raw);
+            } catch (error) {
+                console.warn('Unable to read stored payment result:', error);
+                return null;
+            }
+        }
+
+        function populateTransactionDetails(storedResult) {
+            const invoiceNumber = storedResult?.invoiceNumber ?? getUrlParameter('invoiceNumber') ?? 'N/A';
+            const transactionIdParam = storedResult?.transactionId ?? getUrlParameter('transactionId') ?? 'N/A';
+            const firstName = storedResult?.firstName ?? getUrlParameter('firstName') ?? '';
+            const lastName = storedResult?.lastName ?? getUrlParameter('lastName') ?? '';
             const customerName = (firstName + ' ' + lastName).trim() || 'N/A';
+            const amountValue = storedResult?.amount ?? getUrlParameter('amount') ?? '0';
+            const subscriptionMonthlyValue = storedResult?.subscriptionMonthlyTotal ?? getUrlParameter('subscriptionMonthlyTotal') ?? null;
             const date = new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
@@ -194,115 +231,189 @@
             });
 
             document.getElementById('invoiceNumber').textContent = invoiceNumber;
-            
-            // Handle transaction ID - accept "0" as valid (test transactions)
-            // Only show N/A if truly missing
-            const displayTransactionId = (transactionId && 
-                                         transactionId !== 'N/A' && 
-                                         transactionId !== 'null' && 
-                                         transactionId !== '') 
-                                         ? transactionId 
-                                         : 'N/A';
+
+            const displayTransactionId = (transactionIdParam &&
+                transactionIdParam !== 'N/A' &&
+                transactionIdParam !== 'null' &&
+                transactionIdParam !== '') ? transactionIdParam : 'N/A';
             document.getElementById('transactionId').textContent = displayTransactionId;
-            
-            // Add note if transaction ID is 0 (test transaction)
-            if (transactionId === '0') {
+
+            if (transactionIdParam === '0') {
                 const txIdElement = document.getElementById('transactionId');
                 txIdElement.textContent = '0 (Test Transaction)';
                 txIdElement.classList.add('text-gray-500', 'italic');
             }
-            
-            // Log for debugging
-            console.log('Success page transaction details:', {
-                invoiceNumber,
-                transactionId,
-                displayTransactionId,
-                urlParams: window.location.search
-            });
-            document.getElementById('transactionAmount').textContent = '$' + amount;
+
+            document.getElementById('transactionAmount').textContent = formatCurrency(amountValue);
             document.getElementById('transactionDate').textContent = date;
             document.getElementById('customerName').textContent = customerName;
 
-            // Populate services
-            populateServices();
+            const subscriptionAmountRow = document.getElementById('subscriptionAmountRow');
+            const subscriptionAmountElement = document.getElementById('subscriptionAmount');
+            const subscriptionNumeric = Number(subscriptionMonthlyValue);
+            if (subscriptionAmountRow && subscriptionAmountElement) {
+                if (Number.isFinite(subscriptionNumeric) && subscriptionNumeric > 0) {
+                    subscriptionAmountElement.textContent = formatCurrency(subscriptionNumeric);
+                    subscriptionAmountRow.classList.remove('hidden');
+                } else {
+                    subscriptionAmountRow.classList.add('hidden');
+                }
+            }
+
+            populateServices(storedResult);
+            populateSubscriptionStatus(storedResult);
         }
 
-        // Populate services from URL parameters
-        function populateServices() {
+        function populateServices(storedResult) {
             const servicesList = document.getElementById('servicesList');
-            let serviceIndex = 0;
-            let hasServices = false;
+            servicesList.innerHTML = '';
 
-            while (true) {
-                const productName = getUrlParameter(`productName${serviceIndex}`);
-                const quantity = getUrlParameter(`quantity${serviceIndex}`);
-                const unitPrice = getUrlParameter(`unitPrice${serviceIndex}`);
+            let items = Array.isArray(storedResult?.lineItems) ? storedResult.lineItems : null;
+            if (!items || items.length === 0) {
+                items = [];
+                let serviceIndex = 0;
+                while (true) {
+                    const productName = getUrlParameter(`productName${serviceIndex}`);
+                    if (!productName) break;
+                    const quantity = Number(getUrlParameter(`quantity${serviceIndex}`)) || 1;
+                    const unitPrice = Number(getUrlParameter(`unitPrice${serviceIndex}`)) || 0;
+                    const isSubscription = getUrlParameter(`isSubscription${serviceIndex}`) === 'true';
+                    items.push({
+                        name: productName,
+                        quantity,
+                        unitPrice,
+                        subtotal: unitPrice * quantity,
+                        isSubscription
+                    });
+                    serviceIndex++;
+                }
+            }
 
-                if (!productName) break;
+            if (!items || items.length === 0) {
+                servicesList.innerHTML = '<p class="text-gray-500 italic">Service details not available</p>';
+                return;
+            }
+
+            items.forEach((item, index) => {
+                const quantity = Number(item?.quantity) || 1;
+                const unitPrice = Number(item?.unitPrice) || 0;
+                const subtotal = Number(item?.subtotal);
+                const subtotalValue = Number.isFinite(subtotal) ? subtotal : quantity * unitPrice;
+                const isSubscription = !!item?.isSubscription;
 
                 const serviceDiv = document.createElement('div');
                 serviceDiv.className = 'flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0';
                 serviceDiv.innerHTML = `
                     <div>
-                        <span class="font-medium text-gray-800">${productName}</span>
-                        <span class="text-sm text-gray-500 ml-2">Qty: ${quantity}</span>
+                        <span class="font-medium text-gray-800">${item?.name || `Service ${index + 1}`}</span>
+                        ${isSubscription ? '<span class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">Subscription</span>' : ''}
+                        <span class="text-sm text-gray-500 block sm:inline sm:ml-2">Qty: ${quantity}</span>
+                        ${isSubscription ? '<span class="block text-xs text-purple-600 mt-1">Billed monthly</span>' : ''}
                     </div>
-                    <span class="font-semibold text-gray-800">$${unitPrice}</span>
+                    <span class="font-semibold text-gray-800">${formatCurrency(subtotalValue)}</span>
                 `;
                 servicesList.appendChild(serviceDiv);
-                hasServices = true;
-                serviceIndex++;
-            }
-
-            if (!hasServices) {
-                servicesList.innerHTML = '<p class="text-gray-500 italic">Service details not available</p>';
-            }
+            });
         }
 
-        // Track GA4 Ecommerce Purchase Event
-        function trackPurchaseEvent() {
-            const transactionId = getUrlParameter('transactionId');
-            const amount = parseFloat(getUrlParameter('amount')) || 0;
-            const customerName = getUrlParameter('firstName') + ' ' + getUrlParameter('lastName');
+        function populateSubscriptionStatus(storedResult) {
+            const statusContainer = document.getElementById('subscriptionStatus');
+            const statusTitle = document.getElementById('subscriptionStatusTitle');
+            const statusList = document.getElementById('subscriptionStatusList');
 
-            if (transactionId && amount > 0) {
-                // Track the purchase event
+            if (!statusContainer || !statusTitle || !statusList) {
+                return;
+            }
+
+            const results = Array.isArray(storedResult?.subscriptionResults) ? storedResult.subscriptionResults : [];
+            if (!storedResult?.hasSubscription || results.length === 0) {
+                statusContainer.classList.add('hidden');
+                statusList.innerHTML = '';
+                return;
+            }
+
+            const hasFailure = results.some(result => !result.success);
+            statusContainer.classList.remove('hidden');
+            statusContainer.classList.remove('bg-green-50', 'bg-red-50');
+            statusContainer.classList.add(hasFailure ? 'bg-red-50' : 'bg-green-50');
+            statusTitle.textContent = hasFailure ? 'Subscription Status (Action Needed)' : 'Subscription Enrollment';
+
+            statusList.innerHTML = results.map(result => {
+                const amountText = result.amount ? formatCurrency(result.amount) : null;
+                const statusText = result.success ? 'Active' : 'Needs Attention';
+                const statusColor = result.success ? 'text-green-700' : 'text-red-700';
+                const details = [
+                    result.subscriptionId ? `<span class="text-xs text-gray-500 block">Subscription ID: ${result.subscriptionId}</span>` : '',
+                    result.startDate ? `<span class="text-xs text-gray-500 block">Start Date: ${result.startDate}</span>` : '',
+                    amountText ? `<span class="text-xs text-gray-500 block">Amount: ${amountText} / ${result.interval === 'days' ? 'day' : 'month'}</span>` : '',
+                    !result.success && result.error ? `<span class="text-xs text-red-600 block mt-1">${result.error}</span>` : ''
+                ].join('');
+
+                return `
+                    <div class="flex justify-between items-start py-2 border-b border-gray-200 last:border-b-0">
+                        <div>
+                            <span class="font-medium text-gray-800">${result.itemName || 'Subscription'}</span>
+                            ${details}
+                        </div>
+                        <span class="font-semibold ${statusColor} ml-4 whitespace-nowrap">${statusText}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function trackPurchaseEvent(storedResult) {
+            const transactionId = storedResult?.transactionId ?? getUrlParameter('transactionId');
+            const amountValue = storedResult?.amount ?? getUrlParameter('amount');
+            const amount = Number(amountValue);
+
+            if (transactionId && Number.isFinite(amount) && amount > 0) {
+                const items = getPurchaseItems(storedResult);
                 gtag('event', 'purchase', {
                     transaction_id: transactionId,
                     value: amount,
                     currency: 'USD',
-                    customer_name: customerName,
-                    items: getPurchaseItems()
+                    items
                 });
 
                 console.log('GA4 Purchase event tracked:', {
                     transaction_id: transactionId,
                     value: amount,
-                    currency: 'USD',
-                    customer_name: customerName
+                    currency: 'USD'
                 });
             }
         }
 
-        // Get purchase items for GA4 event
-        function getPurchaseItems() {
+        function getPurchaseItems(storedResult) {
+            if (Array.isArray(storedResult?.lineItems) && storedResult.lineItems.length > 0) {
+                return storedResult.lineItems
+                    .filter(item => !item.isSubscription)
+                    .map((item, index) => ({
+                        item_id: item.itemId || `service_${index}`,
+                        item_name: item.name || `Service ${index + 1}`,
+                        category: item.isSubscription ? 'Bookkeeping Subscription' : 'Bookkeeping Services',
+                        quantity: Number(item.quantity) || 1,
+                        price: Number(item.unitPrice) || 0
+                    }));
+            }
+
             const items = [];
             let serviceIndex = 0;
-
             while (true) {
                 const productName = getUrlParameter(`productName${serviceIndex}`);
+                if (!productName) break;
                 const quantity = parseInt(getUrlParameter(`quantity${serviceIndex}`)) || 1;
                 const unitPrice = parseFloat(getUrlParameter(`unitPrice${serviceIndex}`)) || 0;
+                const isSubscription = getUrlParameter(`isSubscription${serviceIndex}`) === 'true';
 
-                if (!productName) break;
-
-                items.push({
-                    item_id: `service_${serviceIndex}`,
-                    item_name: productName,
-                    category: 'Bookkeeping Services',
-                    quantity: quantity,
-                    price: unitPrice
-                });
+                if (!isSubscription) {
+                    items.push({
+                        item_id: `service_${serviceIndex}`,
+                        item_name: productName,
+                        category: 'Bookkeeping Services',
+                        quantity,
+                        price: unitPrice
+                    });
+                }
 
                 serviceIndex++;
             }
@@ -310,10 +421,10 @@
             return items;
         }
 
-        // Initialize page when loaded
         document.addEventListener('DOMContentLoaded', function() {
-            populateTransactionDetails();
-            trackPurchaseEvent();
+            const storedResult = getStoredPaymentResult();
+            populateTransactionDetails(storedResult);
+            trackPurchaseEvent(storedResult);
         });
     </script>
 </body>

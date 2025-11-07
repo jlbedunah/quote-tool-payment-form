@@ -77,7 +77,25 @@ export default async function handler(req, res) {
 }
 
 function generateEmailContent(quoteData, additionalMessage) {
-  const { firstName, lastName, companyName, email, phone, address1, address2, city, state, zip, services, total } = quoteData;
+  const {
+    firstName,
+    lastName,
+    companyName,
+    email,
+    phone,
+    address1,
+    address2,
+    city,
+    state,
+    zip,
+    services,
+    oneTimeTotal,
+    subscriptionMonthlyTotal,
+    grandTotal
+  } = quoteData;
+
+  const parsedOneTimeTotal = Number(parseFloat(oneTimeTotal ?? grandTotal ?? '0') || 0);
+  const parsedSubscriptionTotal = Number(parseFloat(subscriptionMonthlyTotal ?? '0') || 0);
   
   let html = `
     <!DOCTYPE html>
@@ -138,26 +156,29 @@ function generateEmailContent(quoteData, additionalMessage) {
       const description = service[`description${index}`] || service.description || '';
       const quantity = service[`quantity${index}`] || service.quantity || '1';
       const unitCost = service[`unitCost${index}`] || service.unitCost || '0';
+      const isSubscription = service[`isSubscription${index}`] === 'true' || service.isSubscription === 'true';
+      const interval = service[`subscriptionInterval${index}`] || service.subscriptionInterval || 'monthly';
       
-      // Calculate subtotal if not provided
-      const subtotal = service[`subtotal${index}`] || service.subtotal || (parseFloat(quantity) * parseFloat(unitCost)).toFixed(2);
+      const unitCostNumber = parseFloat(unitCost) || 0;
+      const subtotalRaw = service[`subtotal${index}`] || service.subtotal;
+      const subtotalNumber = subtotalRaw !== undefined ? parseFloat(subtotalRaw) || 0 : unitCostNumber * (parseFloat(quantity) || 1);
       
       console.log(`Service ${index}:`, {
         serviceName,
         description,
         quantity,
         unitCost,
-        subtotal,
+        subtotal: subtotalNumber,
         rawService: service
       });
       
       html += `
         <tr>
-          <td>${serviceName}</td>
+          <td>${serviceName}${isSubscription ? '<span style="color:#7b1fa2; font-size:12px; margin-left:6px;">(Subscription)</span>' : ''}</td>
           <td>${description}</td>
           <td>${quantity}</td>
-          <td>$${parseFloat(unitCost).toFixed(2)}</td>
-          <td>$${parseFloat(subtotal).toFixed(2)}</td>
+          <td>$${unitCostNumber.toFixed(2)}${isSubscription ? ' / month' : ''}</td>
+          <td>$${subtotalNumber.toFixed(2)}</td>
         </tr>
       `;
     });
@@ -175,7 +196,9 @@ function generateEmailContent(quoteData, additionalMessage) {
             </table>
             
             <div class="total-section">
-                <div class="total-amount">Total: $${parseFloat(total).toFixed(2)}</div>
+                <div style="font-size:16px; color:#555; text-align:right;">Due Today</div>
+                <div class="total-amount">$${parsedOneTimeTotal.toFixed(2)}</div>
+                ${parsedSubscriptionTotal > 0 ? `<div style="margin-top:8px; font-size:15px; color:#333; text-align:right;">Monthly Subscription: <strong>$${parsedSubscriptionTotal.toFixed(2)}</strong></div>` : ''}
             </div>
             
             ${additionalMessage ? `
@@ -202,7 +225,22 @@ function generateEmailContent(quoteData, additionalMessage) {
 }
 
 function generatePaymentLink(quoteData) {
-  const { firstName, lastName, companyName, email, phone, address1, address2, city, state, zip, services } = quoteData;
+  const {
+    firstName,
+    lastName,
+    companyName,
+    email,
+    phone,
+    address1,
+    address2,
+    city,
+    state,
+    zip,
+    services,
+    oneTimeTotal,
+    subscriptionMonthlyTotal,
+    grandTotal
+  } = quoteData;
   
   // Detect environment (dev vs production)
   // In dev: NODE_ENV is not 'production' and we're likely running on localhost
@@ -231,6 +269,12 @@ function generatePaymentLink(quoteData) {
   params.append('city', city || '');
   params.append('state', state || '');
   params.append('zip', zip || '');
+  if (oneTimeTotal !== undefined) {
+    params.append('oneTimeTotal', oneTimeTotal ?? grandTotal ?? '0');
+  }
+  if (subscriptionMonthlyTotal !== undefined) {
+    params.append('subscriptionMonthlyTotal', subscriptionMonthlyTotal || '0');
+  }
   
   // Add services
   if (services && services.length > 0) {
@@ -245,8 +289,17 @@ function generatePaymentLink(quoteData) {
       params.append(`productName${index}`, serviceName);
       params.append(`quantity${index}`, quantity);
       params.append(`description${index}`, description);
+      const isSubscription = service[`isSubscription${index}`] === 'true' || service.isSubscription === 'true';
+      const interval = service[`subscriptionInterval${index}`] || service.subscriptionInterval || 'monthly';
+      
       params.append(`unitCost${index}`, unitCost);
       params.append(`subtotal${index}`, subtotal);
+      if (isSubscription) {
+        params.append(`isSubscription${index}`, 'true');
+        if (interval) {
+          params.append(`subscriptionInterval${index}`, interval);
+        }
+      }
     });
   }
   
