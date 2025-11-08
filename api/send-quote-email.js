@@ -108,9 +108,13 @@ function generateEmailContent(quoteData, additionalMessage) {
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
             .customer-info { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .services-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .services-table th, .services-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            .services-table { width: 100%; border-collapse: collapse; margin: 20px 0; table-layout: fixed; }
+            .services-table th, .services-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; word-break: break-word; vertical-align: top; }
             .services-table th { background-color: #f8f9fa; font-weight: bold; }
+            .services-table th:nth-child(1), .services-table td:nth-child(1) { width: 40%; }
+            .services-table th:nth-child(2), .services-table td:nth-child(2) { width: 15%; }
+            .services-table th:nth-child(3), .services-table td:nth-child(3) { width: 20%; }
+            .services-table th:nth-child(4), .services-table td:nth-child(4) { width: 25%; text-align: right; }
             .total-section { background: #e3f2fd; padding: 20px; border-radius: 8px; text-align: right; margin-top: 20px; }
             .total-amount { font-size: 24px; font-weight: bold; color: #1976d2; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
@@ -138,7 +142,6 @@ function generateEmailContent(quoteData, additionalMessage) {
                 <thead>
                     <tr>
                         <th>Service</th>
-                        <th>Description</th>
                         <th>Quantity</th>
                         <th>Unit Price</th>
                         <th>Subtotal</th>
@@ -175,10 +178,9 @@ function generateEmailContent(quoteData, additionalMessage) {
       html += `
         <tr>
           <td>${serviceName}${isSubscription ? '<span style="color:#7b1fa2; font-size:12px; margin-left:6px;">(Subscription)</span>' : ''}</td>
-          <td>${description}</td>
           <td>${quantity}</td>
           <td>$${unitCostNumber.toFixed(2)}${isSubscription ? ' / month' : ''}</td>
-          <td>$${subtotalNumber.toFixed(2)}</td>
+          <td style="text-align:right;">$${subtotalNumber.toFixed(2)}</td>
         </tr>
       `;
     });

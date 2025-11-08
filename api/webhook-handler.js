@@ -1,3 +1,5 @@
+import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
+
 export default async function handler(req, res) {
     // Only allow POST requests
     if (req.method !== 'POST') {
@@ -5,68 +7,87 @@ export default async function handler(req, res) {
     }
 
     try {
+        const eventBody = normalizeRequestBody(req.body);
+
         console.log('Webhook received:', {
             headers: req.headers,
-            body: req.body,
+            body: eventBody,
             timestamp: new Date().toISOString()
         });
 
         // Authorize.net webhook notifications
-        if (req.body && req.body.eventType) {
-            const { eventType, payload } = req.body;
-            
+        if (eventBody && eventBody.eventType) {
+            const { eventType } = eventBody;
+
             console.log(`Processing webhook event: ${eventType}`);
-            
+
+            let synchronizationResult = null;
+
             // Handle different webhook event types
             switch (eventType) {
                 case 'net.authorize.payment.authcapture.created':
-                    console.log('Payment authorized and captured:', payload);
-                    // Handle successful payment
+                    synchronizationResult = await syncAuthorizeNetTransaction(eventBody);
                     break;
-                    
+
                 case 'net.authorize.payment.authcapture.failed':
-                    console.log('Payment failed:', payload);
-                    // Handle failed payment
+                    console.log('Payment failed (no CRM sync attempted).');
                     break;
-                    
+
                 case 'net.authorize.payment.refund.created':
-                    console.log('Refund created:', payload);
-                    // Handle refund
+                    console.log('Refund created:', eventBody.payload);
                     break;
-                    
+
                 default:
                     console.log('Unknown webhook event type:', eventType);
             }
-            
+
             // Always return 200 for successful webhook processing
-            return res.status(200).json({ 
-                success: true, 
+            return res.status(200).json({
+                success: true,
                 message: 'Webhook processed successfully',
-                eventType: eventType,
+                eventType,
+                synchronizationResult,
                 timestamp: new Date().toISOString()
             });
         }
 
         // Handle other webhook formats or test requests
-        console.log('Webhook received (unknown format):', req.body);
-        
+        console.log('Webhook received (unknown format):', eventBody);
+
         // Return 200 to acknowledge receipt
-        return res.status(200).json({ 
-            success: true, 
+        return res.status(200).json({
+            success: true,
             message: 'Webhook received and acknowledged',
             timestamp: new Date().toISOString()
         });
 
     } catch (error) {
         console.error('Webhook processing error:', error);
-        
+
         // Even on error, return 200 to prevent webhook retries
         // Log the error for debugging but don't fail the webhook
-        return res.status(200).json({ 
-            success: false, 
+        return res.status(200).json({
+            success: false,
             error: 'Webhook processed with errors',
             message: error.message,
             timestamp: new Date().toISOString()
         });
     }
+}
+
+function normalizeRequestBody(body) {
+    if (!body) {
+        return {};
+    }
+
+    if (typeof body === 'string') {
+        try {
+            return JSON.parse(body);
+        } catch (parseError) {
+            console.warn('Failed to parse string webhook body as JSON. Returning raw string.');
+            return { rawBody: body };
+        }
+    }
+
+    return body;
 }

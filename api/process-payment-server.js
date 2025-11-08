@@ -64,16 +64,27 @@ export default async function paymentHandler(req, res) {
             lastName,
             companyName,
             address1,
+            address2,
             city,
             state,
             zip,
             country,
             email,
+            secondaryEmail,
             amount,
             lineItems = [],
             subscriptionItems = [],
             oneTimeLineItems = [],
-            subscriptionMonthlyTotal
+            subscriptionMonthlyTotal,
+            billingFirstName,
+            billingLastName,
+            billingCompany,
+            billingAddress1,
+            billingAddress2,
+            billingCity,
+            billingState,
+            billingZip,
+            billingCountry
         } = req.body;
 
         if (!cardNumber || !expDate || !cardCode ||
@@ -120,6 +131,17 @@ export default async function paymentHandler(req, res) {
                 customerId = localPart.slice(0, 20);
             }
         }
+
+        const billFirstName = billingFirstName || firstName;
+        const billLastName = billingLastName || lastName;
+        const billCompany = billingCompany || companyName || '';
+        const billAddressLine1 = billingAddress1 || address1 || '';
+        const billAddressLine2 = billingAddress2 || address2 || '';
+        const billCity = billingCity || city || '';
+        const billState = billingState || state || '';
+        const billZip = billingZip || zip || '';
+        const billCountryValue = billingCountry || country || 'US';
+        const combinedBillAddress = [billAddressLine1, billAddressLine2].filter(Boolean).join(' ');
 
         const builder = new FastXMLBuilder({ ignoreAttributes: false });
         const authorizeNetUrl = isProduction
@@ -192,14 +214,14 @@ export default async function paymentHandler(req, res) {
                             }
                         } : {}),
                         billTo: {
-                            firstName,
-                            lastName,
-                            company: companyName || '',
-                            address: address1,
-                            city,
-                            state,
-                            zip,
-                            country: country || 'US'
+                            firstName: billFirstName,
+                            lastName: billLastName,
+                            company: billCompany,
+                            address: combinedBillAddress,
+                            city: billCity,
+                            state: billState,
+                            zip: billZip,
+                            country: billCountryValue
                         },
                         transactionSettings: {
                             setting: [
@@ -416,19 +438,19 @@ export default async function paymentHandler(req, res) {
                         if (email || customerId) {
                             subscription.customer = {
                                 ...(customerId ? { id: customerId } : {}),
-                                ...(email ? { email } : {})
+                                email
                             };
                         }
 
                         subscription.billTo = {
-                            firstName,
-                            lastName,
-                            company: companyName || '',
-                            address: address1,
-                            city,
-                            state,
-                            zip,
-                            country: country || 'US'
+                            firstName: billFirstName,
+                            lastName: billLastName,
+                            company: billCompany,
+                            address: combinedBillAddress,
+                            city: billCity,
+                            state: billState,
+                            zip: billZip,
+                            country: billCountryValue
                         };
 
                         const subscriptionPayload = {
