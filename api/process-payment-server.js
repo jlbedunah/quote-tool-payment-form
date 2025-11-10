@@ -1,4 +1,5 @@
 import nodeFetch from 'node-fetch';
+import { getAuthorizeNetConfig } from '../lib/authorize-net-env.js';
 const fetchFn = typeof globalThis.fetch === 'function'
     ? globalThis.fetch.bind(globalThis)
     : nodeFetch;
@@ -93,18 +94,39 @@ export default async function paymentHandler(req, res) {
             return res.status(400).json({ success: false, error: 'Missing required payment or customer information.' });
         }
 
-        const isProduction = process.env.NODE_ENV === 'production' || process.env.AUTHORIZE_NET_ENVIRONMENT === 'production';
+        const {
+            environment: authorizeNetEnvironment,
+            loginId,
+            transactionKey,
+            endpoint: authorizeNetUrl
+        } = getAuthorizeNetConfig();
 
-        const loginId = isProduction ? process.env.AUTHORIZE_NET_LOGIN_ID_PROD : process.env.AUTHORIZE_NET_LOGIN_ID;
-        const transactionKey = isProduction ? process.env.AUTHORIZE_NET_TRANSACTION_KEY_PROD : process.env.AUTHORIZE_NET_TRANSACTION_KEY;
+        const isProduction = authorizeNetEnvironment === 'production';
 
-        console.log('Payment processing environment:', isProduction ? 'PRODUCTION' : 'SANDBOX');
+        console.log('Payment processing environment:', authorizeNetEnvironment.toUpperCase(), {
+            vercelEnv: process.env.VERCEL_ENV || null,
+            nodeEnv: process.env.NODE_ENV || null
+        });
         console.log('Using Login ID:', loginId ? loginId.substring(0, 4) + '****' : 'MISSING');
 
         if (!loginId || !transactionKey) {
+            const missingEnvironment = authorizeNetEnvironment === 'production' ? 'production' : 'sandbox';
+            console.error('Authorize.net credentials missing for environment:', authorizeNetEnvironment, {
+                loginIdPresent: Boolean(loginId),
+                transactionKeyPresent: Boolean(transactionKey),
+                expectedVariables: missingEnvironment === 'production'
+                    ? ['AUTHORIZE_NET_LOGIN_ID_PROD', 'AUTHORIZE_NET_TRANSACTION_KEY_PROD']
+                    : [
+                        'AUTHORIZE_NET_LOGIN_ID_SANDBOX',
+                        'AUTHORIZE_NET_TRANSACTION_KEY_SANDBOX',
+                        'AUTHORIZE_NET_LOGIN_ID',
+                        'AUTHORIZE_NET_TRANSACTION_KEY'
+                    ],
+                vercelEnv: process.env.VERCEL_ENV || null
+            });
             return res.status(500).json({
                 success: false,
-                error: `Authorize.net ${isProduction ? 'production' : 'sandbox'} credentials not configured.`
+                error: `Authorize.net ${authorizeNetEnvironment} credentials not configured.`
             });
         }
 
@@ -144,9 +166,6 @@ export default async function paymentHandler(req, res) {
         const combinedBillAddress = [billAddressLine1, billAddressLine2].filter(Boolean).join(' ');
 
         const builder = new FastXMLBuilder({ ignoreAttributes: false });
-        const authorizeNetUrl = isProduction
-            ? 'https://api.authorize.net/xml/v1/request.api'
-            : 'https://apitest.authorize.net/xml/v1/request.api';
 
         const requestedLineItems = Array.isArray(lineItems) ? lineItems : [];
         const requestedSubscriptionItems = Array.isArray(subscriptionItems) ? subscriptionItems : [];

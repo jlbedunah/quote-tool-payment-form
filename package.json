@@ -9,12 +9,17 @@
     "start": "echo 'Static site - no start script needed'"
   },
   "dependencies": {
-    "resend": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "fast-xml-parser": "^4.4.0",
     "node-fetch": "^3.3.2",
-    "fast-xml-parser": "^4.4.0"
+    "resend": "^3.2.0"
   },
-  "devDependencies": {},
-  "keywords": ["quote", "payment", "form", "vercel"],
+  "keywords": [
+    "quote",
+    "payment",
+    "form",
+    "vercel"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }
