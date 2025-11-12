@@ -50,25 +50,13 @@
 - Bulk quote generation
 - Quote approval workflows
 
-### **3. Customer Management**
-- Customer database and profiles
-- Purchase history tracking
-- Customer communication logs
-- Repeat customer discounts
-
-### **4. Reporting & Analytics**
-- Sales reports and analytics
-- Product performance metrics
-- Revenue tracking
-- Customer insights
-
-### **5. Integration Enhancements**
+### **3. Integration Enhancements**
 - Hyros advanced tracking
 - CRM integrations (Salesforce, HubSpot)
 - Accounting software integration
 - Email marketing automation
 
-### **6. Mobile Optimization**
+### **4. Mobile Optimization**
 - Mobile-first admin interface
 - Progressive Web App (PWA) features
 - Offline capability
@@ -91,10 +79,8 @@
 4. Create product templates
 
 ### **Phase 3: Advanced Features**
-1. Customer management
-2. Reporting dashboard
-3. Integration enhancements
-4. Mobile optimization
+1. Integration enhancements
+2. Mobile optimization
 
 ---
 
