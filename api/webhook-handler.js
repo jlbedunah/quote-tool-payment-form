@@ -1,4 +1,5 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
+import { syncAuthorizeNetInvoice } from '../lib/authorize-net-invoice-sync.js';
 
 export default async function handler(req, res) {
     // Only allow POST requests
@@ -12,8 +13,12 @@ export default async function handler(req, res) {
         console.log('Webhook received:', {
             headers: req.headers,
             body: eventBody,
+            eventType: eventBody?.eventType,
             timestamp: new Date().toISOString()
         });
+        
+        // Log full webhook payload for debugging (first 1000 chars)
+        console.log('Webhook payload (first 1000 chars):', JSON.stringify(eventBody).substring(0, 1000));
 
         // Authorize.net webhook notifications
         if (eventBody && eventBody.eventType) {
@@ -23,22 +28,49 @@ export default async function handler(req, res) {
 
             let synchronizationResult = null;
 
-            // Handle different webhook event types
-            switch (eventType) {
-                case 'net.authorize.payment.authcapture.created':
-                    synchronizationResult = await syncAuthorizeNetTransaction(eventBody);
-                    break;
+            // Handle payment transaction events
+            if (eventType.startsWith('net.authorize.payment.')) {
+                switch (eventType) {
+                    case 'net.authorize.payment.authcapture.created':
+                        synchronizationResult = await syncAuthorizeNetTransaction(eventBody);
+                        break;
 
-                case 'net.authorize.payment.authcapture.failed':
-                    console.log('Payment failed (no CRM sync attempted).');
-                    break;
+                    case 'net.authorize.payment.authcapture.failed':
+                        console.log('Payment failed (no CRM sync attempted).');
+                        break;
 
-                case 'net.authorize.payment.refund.created':
-                    console.log('Refund created:', eventBody.payload);
-                    break;
+                    case 'net.authorize.payment.refund.created':
+                        console.log('Refund created:', eventBody.payload);
+                        break;
 
-                default:
-                    console.log('Unknown webhook event type:', eventType);
+                    default:
+                        console.log('Unknown payment event type:', eventType);
+                }
+            }
+            // Handle invoice events
+            // Note: Authorize.net invoice event types may vary
+            // Check webhook payload to see actual event types
+            else if (eventType.includes('invoice') || 
+                     eventType.includes('invoicing') ||
+                     eventType.startsWith('invoicing.customer.invoice.') ||
+                     eventType.startsWith('net.authorize.invoice.')) {
+                try {
+                    console.log('Processing invoice event:', eventType);
+                    synchronizationResult = await syncAuthorizeNetInvoice(eventBody);
+                } catch (error) {
+                    console.error('Error syncing invoice to GHL:', error);
+                    // Don't fail the webhook, but log the error
+                    synchronizationResult = {
+                        success: false,
+                        error: error.message
+                    };
+                }
+            }
+            // Unknown event type - log for debugging
+            else {
+                console.log('Unknown webhook event type:', eventType);
+                console.log('Full event body:', JSON.stringify(eventBody, null, 2));
+                // Log unknown events so you can see what Authorize.net is sending
             }
 
             // Always return 200 for successful webhook processing
