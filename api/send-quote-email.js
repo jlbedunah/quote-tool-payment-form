@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { findOrCreateContact, appendNoteToContact, addTagsToContact } from '../lib/gohighlevel.js';
 
 // Check if API key is available
 if (!process.env.RESEND_API_KEY) {
@@ -62,9 +63,24 @@ export default async function handler(req, res) {
 
     console.log('Email sent successfully:', data);
 
+    // Sync to GHL after email is sent successfully
+    let ghlSyncResult = null;
+    try {
+      ghlSyncResult = await syncQuoteToGHL(quoteData, recipientEmail);
+      console.log('GHL sync result:', ghlSyncResult);
+    } catch (ghlError) {
+      // Log GHL sync errors but don't fail the email send
+      console.error('GHL sync failed (email still sent):', ghlError);
+      ghlSyncResult = {
+        success: false,
+        error: ghlError.message
+      };
+    }
+
     return res.status(200).json({ 
       success: true, 
-      messageId: data.id 
+      messageId: data.id,
+      ghlSync: ghlSyncResult
     });
 
   } catch (error) {
@@ -306,4 +322,121 @@ function generatePaymentLink(quoteData) {
   }
   
   return `${baseUrl}?${params.toString()}`;
+}
+
+/**
+ * Sync quote email to GoHighLevel
+ * - Find or create contact by email
+ * - Tag with "email-quote-sent"
+ * - Add note with quote details and payment link
+ */
+async function syncQuoteToGHL(quoteData, recipientEmail) {
+  const {
+    firstName,
+    lastName,
+    companyName,
+    email,
+    phone,
+    address1,
+    address2,
+    city,
+    state,
+    zip,
+    services,
+    oneTimeTotal,
+    subscriptionMonthlyTotal,
+    grandTotal
+  } = quoteData;
+
+  // Use recipientEmail from the email being sent (may differ from quoteData.email)
+  const contactEmail = recipientEmail?.toLowerCase() || email?.toLowerCase();
+
+  if (!contactEmail) {
+    throw new Error('Email is required to sync quote to GHL');
+  }
+
+  // Find or create contact
+  const contact = await findOrCreateContact({
+    email: contactEmail,
+    firstName,
+    lastName,
+    company: companyName,
+    phone,
+    address: {
+      line1: address1,
+      line2: address2,
+      city,
+      state,
+      postalCode: zip,
+      country: 'US'
+    }
+  });
+
+  if (!contact || !contact.id) {
+    throw new Error('Failed to find or create GHL contact');
+  }
+
+  const contactId = contact.id;
+
+  // Generate payment link
+  const paymentLink = generatePaymentLink(quoteData);
+
+  // Build quote details for note
+  const parsedOneTimeTotal = Number(parseFloat(oneTimeTotal ?? grandTotal ?? '0') || 0);
+  const parsedSubscriptionTotal = Number(parseFloat(subscriptionMonthlyTotal ?? '0') || 0);
+
+  // Build services list
+  let servicesText = '';
+  if (services && services.length > 0) {
+    services.forEach((service, index) => {
+      const serviceName = service[`productName${index}`] || service.productName || 'Service';
+      const description = service[`description${index}`] || service.description || '';
+      const quantity = service[`quantity${index}`] || service.quantity || '1';
+      const unitCost = service[`unitCost${index}`] || service.unitCost || '0';
+      const subtotalRaw = service[`subtotal${index}`] || service.subtotal;
+      const unitCostNumber = parseFloat(unitCost) || 0;
+      const subtotalNumber = subtotalRaw !== undefined ? parseFloat(subtotalRaw) || 0 : unitCostNumber * (parseFloat(quantity) || 1);
+      const isSubscription = service[`isSubscription${index}`] === 'true' || service.isSubscription === 'true';
+      
+      servicesText += `\n• ${serviceName}`;
+      if (description) {
+        servicesText += ` - ${description}`;
+      }
+      servicesText += ` (Qty: ${quantity} × $${unitCostNumber.toFixed(2)})`;
+      if (isSubscription) {
+        servicesText += ' [Subscription]';
+      }
+      servicesText += ` = $${subtotalNumber.toFixed(2)}`;
+    });
+  }
+
+  // Build note body
+  const noteBody = `📧 Quote Email Sent
+
+Quote sent to: ${contactEmail}
+Date: ${new Date().toLocaleString()}
+
+Customer Information:
+${firstName || ''} ${lastName || ''}${companyName ? `\nCompany: ${companyName}` : ''}${phone ? `\nPhone: ${phone}` : ''}
+${address1 || ''}${address2 ? `, ${address2}` : ''}${city ? `\n${city}` : ''}${state ? `, ${state}` : ''} ${zip || ''}
+
+Services:${servicesText || '\nNo services specified'}
+
+Totals:
+One-Time Total: $${parsedOneTimeTotal.toFixed(2)}${parsedSubscriptionTotal > 0 ? `\nMonthly Subscription: $${parsedSubscriptionTotal.toFixed(2)}` : ''}
+
+Payment Link:
+${paymentLink}`;
+
+  // Add note to contact
+  await appendNoteToContact(contactId, noteBody);
+
+  // Add tag
+  await addTagsToContact(contactId, ['email-quote-sent']);
+
+  return {
+    success: true,
+    contactId,
+    contactEmail
+  };
 }
