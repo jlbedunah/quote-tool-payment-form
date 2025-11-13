@@ -1,5 +1,4 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
-import { syncAuthorizeNetInvoice } from '../lib/authorize-net-invoice-sync.js';
 
 export default async function handler(req, res) {
     // Only allow POST requests
@@ -45,25 +44,6 @@ export default async function handler(req, res) {
 
                     default:
                         console.log('Unknown payment event type:', eventType);
-                }
-            }
-            // Handle invoice events
-            // Note: Authorize.net invoice event types may vary
-            // Check webhook payload to see actual event types
-            else if (eventType.includes('invoice') || 
-                     eventType.includes('invoicing') ||
-                     eventType.startsWith('invoicing.customer.invoice.') ||
-                     eventType.startsWith('net.authorize.invoice.')) {
-                try {
-                    console.log('Processing invoice event:', eventType);
-                    synchronizationResult = await syncAuthorizeNetInvoice(eventBody);
-                } catch (error) {
-                    console.error('Error syncing invoice to GHL:', error);
-                    // Don't fail the webhook, but log the error
-                    synchronizationResult = {
-                        success: false,
-                        error: error.message
-                    };
                 }
             }
             // Unknown event type - log for debugging

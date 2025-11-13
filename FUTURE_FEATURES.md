@@ -15,10 +15,10 @@
   - Bulk import products from CSV
 
 - **Product Details Management**
-  - Service name and description
+  - Service name and description (with Authorize.net length limits: name max 31 chars, description max 255 chars)
   - Pricing (unit price, quantity discounts)
-  - Tax settings (taxable/non-taxable)
-  - Category/type classification
+  - Category/type classification (for organization only, not sent to Authorize.net)
+  - Subscription settings (one-time vs subscription, interval for subscriptions)
   - Active/inactive status
 
 - **Admin Dashboard**
@@ -42,9 +42,49 @@
 
 ---
 
+### **2. Quote Custom Objects in GoHighLevel**
+**Status**: Planned  
+**Priority**: High  
+**Estimated Effort**: Medium
+
+#### **Features:**
+- **Custom Object Schema**
+  - Define Quote object with fields (quote ID, invoice number, customer reference, status, amounts, line items, timestamps, payment URL, source)
+  - Link quotes to GHL contacts and opportunities
+  - Support for quote lifecycle (draft, sent, accepted, paid, expired)
+
+- **Authorize.net Integration**
+  - Automatically create Quote custom objects from all Authorize.net transactions (quote tool + manual invoices)
+  - Map transaction data to Quote object fields
+  - Link quotes to existing GHL contacts via email matching
+
+- **GHL Workflow Integration**
+  - Trigger workflows based on quote status changes
+  - Enable quote-specific automations (reminders, notifications, pipeline updates)
+  - Support for quote reporting and filtering in GHL
+
+- **Reporting Capabilities**
+  - Filter and export quotes by status, customer, date, amount
+  - Generate lists of outstanding quotes with contact details
+  - Track quote conversion rates and revenue
+
+#### **Technical Implementation:**
+- **API Integration**: Use GHL Custom Objects API to create/update Quote records
+- **Webhook Enhancement**: Extend existing Authorize.net webhook handler to create Quote objects
+- **Data Mapping**: Normalize Authorize.net transaction data to Quote schema
+- **Idempotency**: Use invoice/transaction ID as external key to prevent duplicates
+
+#### **User Stories:**
+- As a sales manager, I want to see all outstanding quotes with customer contact info
+- As an admin, I want quotes from all sources (quote tool + manual Authorize.net invoices) in one place
+- As a team member, I want workflows to trigger when quotes are accepted or expire
+- As a business owner, I want to track quote conversion rates and revenue
+
+---
+
 ## 🔮 **Future Enhancements**
 
-### **2. Advanced Quote Management**
+### **3. Advanced Quote Management**
 - Quote templates and presets
 - Quote versioning and history
 - Bulk quote generation

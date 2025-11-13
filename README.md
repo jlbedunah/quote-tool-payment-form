@@ -21,10 +21,13 @@ A complete quote generation and payment processing system built with HTML, CSS (
 
 ## Services Included
 
-- **Catch-up Bookkeeping** - $219
-- **Tax Return (LLC)** - $799
-- **Tax Return (S-Corp)** - $799
-- **Monthly Bookkeeping Subscription** - $199
+Products are now managed through the Admin Product Management System. See [ADMIN_PRODUCTS_SETUP.md](./ADMIN_PRODUCTS_SETUP.md) for details.
+
+Default products:
+- **Catch-up Bookkeeping** - $2.19
+- **Tax Return (LLC)** - $1.99
+- **Tax Return (S-Corp)** - $2.01
+- **Monthly Bookkeeping Subscription** - $2.19 (monthly subscription)
 
 ## Setup
 
@@ -61,12 +64,35 @@ Update the following fields in `payment-form.html`:
 - **Analytics**: Hyros integration via line items
 - **Deployment**: Vercel
 
+## Admin Product Management
+
+Manage products and services without editing code:
+
+1. **Admin Dashboard**: Access `admin-products.html` to manage products
+2. **Product API**: Products are loaded from `/api/products`
+3. **Quote Tool Integration**: Products automatically appear in the quote tool dropdowns
+
+See [ADMIN_PRODUCTS_SETUP.md](./ADMIN_PRODUCTS_SETUP.md) for detailed documentation.
+
+**Note**: For production, you'll need to integrate a database (Vercel KV, Supabase, MongoDB, etc.) for write operations. See the admin setup documentation for details.
+
 ## File Structure
 
 ```
 /
 ├── quote-tool.html          # Quote generation tool
-├── payment-form.html        # Payment processing form
+├── payment-form-robust.html # Payment processing form
+├── admin-products.html      # Admin product management dashboard
+├── api/
+│   ├── products.js          # Product management API
+│   ├── process-payment-server.js  # Payment processing
+│   └── send-quote-email.js  # Email quote functionality
+├── data/
+│   └── products.json        # Product data (read-only in production)
+├── lib/
+│   ├── authorize-net-env.js # Authorize.net configuration
+│   ├── authorize-net-sync.js # GHL sync functionality
+│   └── gohighlevel.js       # GHL API client
 ├── .gitignore              # Git ignore rules
 └── README.md               # This file
 ```

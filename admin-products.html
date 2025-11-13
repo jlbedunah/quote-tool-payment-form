@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Product Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fef2f2',
+                            500: '#CA1824',
+                            600: '#B0151F',
+                            700: '#96121A',
+                        },
+                        brand: '#CA1824'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md mb-6 p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Product Management</h1>
+                    <p class="text-gray-600 mt-1">Manage your products and services</p>
+                </div>
+                <button onclick="openAddProductModal()" 
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Product
+                </button>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                Loading products...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div id="productModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="modalTitle" class="text-2xl font-bold text-gray-800">Add Product</h2>
+                    <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="productForm" onsubmit="saveProduct(event)">
+                    <input type="hidden" id="productId" name="id">
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label for="productName" class="block text-sm font-medium text-gray-700 mb-2">
+                                Product Name * <span class="text-xs text-gray-500">(max 31 chars)</span>
+                            </label>
+                            <input type="text" id="productName" name="name" required maxlength="31"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                   oninput="updateCharCount('productName', 'nameCharCount', 31)">
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span id="nameCharCount">0</span>/31 characters
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="productDescription" class="block text-sm font-medium text-gray-700 mb-2">
+                                Description <span class="text-xs text-gray-500">(max 255 chars)</span>
+                            </label>
+                            <textarea id="productDescription" name="description" rows="3" maxlength="255"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-y"
+                                      oninput="updateCharCount('productDescription', 'descCharCount', 255)"></textarea>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span id="descCharCount">0</span>/255 characters
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="productPrice" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Unit Price * <span class="text-xs text-gray-500">(USD)</span>
+                                </label>
+                                <input type="number" id="productPrice" name="unitPrice" required min="0" step="0.01"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            </div>
+
+                            <div>
+                                <label for="productCategory" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Category
+                                </label>
+                                <input type="text" id="productCategory" name="category"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                       placeholder="e.g., Bookkeeping, Tax Services">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Product Type *
+                            </label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="isSubscription" value="false" checked
+                                           class="mr-2" onchange="toggleSubscriptionFields()">
+                                    <span>One-time Payment</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="isSubscription" value="true"
+                                           class="mr-2" onchange="toggleSubscriptionFields()">
+                                    <span>Subscription</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="subscriptionFields" class="hidden">
+                            <label for="subscriptionInterval" class="block text-sm font-medium text-gray-700 mb-2">
+                                Subscription Interval *
+                            </label>
+                            <select id="subscriptionInterval" name="subscriptionInterval"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="biweekly">Bi-weekly</option>
+                                <option value="annually">Annually</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="productActive" name="isActive" checked
+                                       class="mr-2">
+                                <span class="text-sm font-medium text-gray-700">Active (product will appear in quote tool)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 mt-6">
+                        <button type="button" onclick="closeProductModal()"
+                                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" id="saveProductBtn"
+                                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                            Save Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let products = [];
+        let editingProductId = null;
+
+        // Load products on page load
+        window.addEventListener('load', function() {
+            loadProducts();
+        });
+
+        // Load products from API
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products?includeInactive=true');
+                const data = await response.json();
+                if (data.success && data.products) {
+                    products = data.products;
+                    renderProductsTable();
+                } else {
+                    showError('Failed to load products');
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+                showError('Error loading products: ' + error.message);
+            }
+        }
+
+        // Render products table
+        function renderProductsTable() {
+            const tbody = document.getElementById('productsTableBody');
+            if (products.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                            No products found. Click "Add Product" to create one.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = products.map(product => {
+                const typeBadge = product.isSubscription 
+                    ? `<span class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">Subscription (${product.subscriptionInterval || 'N/A'})</span>`
+                    : `<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">One-time</span>`;
+                
+                const statusBadge = product.isActive
+                    ? `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">Active</span>`
+                    : `<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Inactive</span>`;
+
+                const description = product.description 
+                    ? (product.description.length > 50 ? product.description.substring(0, 50) + '...' : product.description)
+                    : '<span class="text-gray-400">No description</span>';
+
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-500">${description}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">$${product.unitPrice.toFixed(2)}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${product.category || 'N/A'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${typeBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editProduct('${product.id}')" 
+                                    class="text-blue-600 hover:text-blue-900 mr-4">Edit</button>
+                            <button onclick="deleteProduct('${product.id}')" 
+                                    class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Open add product modal
+        function openAddProductModal() {
+            editingProductId = null;
+            document.getElementById('modalTitle').textContent = 'Add Product';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productActive').checked = true;
+            document.querySelector('input[name="isSubscription"][value="false"]').checked = true;
+            toggleSubscriptionFields();
+            updateCharCount('productName', 'nameCharCount', 31);
+            updateCharCount('productDescription', 'descCharCount', 255);
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        // Close product modal
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+            editingProductId = null;
+        }
+
+        // Edit product
+        function editProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) {
+                showError('Product not found');
+                return;
+            }
+
+            editingProductId = productId;
+            document.getElementById('modalTitle').textContent = 'Edit Product';
+            document.getElementById('productId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productDescription').value = product.description || '';
+            document.getElementById('productPrice').value = product.unitPrice;
+            document.getElementById('productCategory').value = product.category || '';
+            document.getElementById('productActive').checked = product.isActive !== false;
+            
+            const subscriptionRadio = document.querySelector(`input[name="isSubscription"][value="${product.isSubscription ? 'true' : 'false'}"]`);
+            if (subscriptionRadio) {
+                subscriptionRadio.checked = true;
+            }
+            
+            if (product.isSubscription) {
+                document.getElementById('subscriptionInterval').value = product.subscriptionInterval || 'monthly';
+            }
+            
+            toggleSubscriptionFields();
+            updateCharCount('productName', 'nameCharCount', 31);
+            updateCharCount('productDescription', 'descCharCount', 255);
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        // Toggle subscription fields
+        function toggleSubscriptionFields() {
+            const isSubscription = document.querySelector('input[name="isSubscription"]:checked').value === 'true';
+            const subscriptionFields = document.getElementById('subscriptionFields');
+            const intervalField = document.getElementById('subscriptionInterval');
+            
+            if (isSubscription) {
+                subscriptionFields.classList.remove('hidden');
+                intervalField.required = true;
+            } else {
+                subscriptionFields.classList.add('hidden');
+                intervalField.required = false;
+            }
+        }
+
+        // Update character count
+        function updateCharCount(inputId, countId, maxLength) {
+            const input = document.getElementById(inputId);
+            const count = document.getElementById(countId);
+            if (input && count) {
+                const length = input.value.length;
+                count.textContent = length;
+                if (length > maxLength) {
+                    count.classList.add('text-red-600');
+                } else {
+                    count.classList.remove('text-red-600');
+                }
+            }
+        }
+
+        // Save product
+        async function saveProduct(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const productData = {
+                name: formData.get('name'),
+                description: formData.get('description') || '',
+                unitPrice: parseFloat(formData.get('unitPrice')),
+                category: formData.get('category') || '',
+                isSubscription: formData.get('isSubscription') === 'true',
+                subscriptionInterval: formData.get('isSubscription') === 'true' ? formData.get('subscriptionInterval') : null,
+                isActive: formData.get('isActive') === 'on'
+            };
+
+            try {
+                const saveBtn = document.getElementById('saveProductBtn');
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                let response;
+                if (editingProductId) {
+                    // Update existing product
+                    response = await fetch(`/api/products?id=${editingProductId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(productData)
+                    });
+                } else {
+                    // Create new product
+                    response = await fetch('/api/products', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(productData)
+                    });
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    closeProductModal();
+                    loadProducts();
+                    showSuccess(editingProductId ? 'Product updated successfully' : 'Product created successfully');
+                } else {
+                    showError(data.error || data.errors?.join(', ') || 'Failed to save product');
+                }
+            } catch (error) {
+                console.error('Error saving product:', error);
+                showError('Error saving product: ' + error.message);
+            } finally {
+                const saveBtn = document.getElementById('saveProductBtn');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Product';
+            }
+        }
+
+        // Delete product
+        async function deleteProduct(productId) {
+            if (!confirm('Are you sure you want to delete this product? This will deactivate it.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/products?id=${productId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadProducts();
+                    showSuccess('Product deleted successfully');
+                } else {
+                    showError(data.error || 'Failed to delete product');
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                showError('Error deleting product: ' + error.message);
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            alert(message); // TODO: Replace with a proper toast notification
+        }
+
+        // Show error message
+        function showError(message) {
+            alert('Error: ' + message); // TODO: Replace with a proper toast notification
+        }
+    </script>
+</body>
+</html>
+

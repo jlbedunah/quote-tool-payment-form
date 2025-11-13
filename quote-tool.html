@@ -170,24 +170,9 @@
                                            autocomplete="off" placeholder="Type to search services...">
                                     <div id="serviceDropdown0" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                         <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Catch-up Bookkeeping</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (LLC)</div>
-                                                <div class="text-sm text-gray-500">$1.99</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (S-Corp)</div>
-                                                <div class="text-sm text-gray-500">$2.01</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19" data-subscription="true" data-interval="monthly">
-                                                <div class="font-medium">Monthly Bookkeeping Subscription</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
+                                            <!-- Products will be dynamically inserted here -->
                                             <div class="border-t border-gray-200 mt-2 pt-2">
-                                                <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
+                                                <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium" style="display: none;">
                                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                                     </svg>
@@ -367,6 +352,7 @@
 
     <script>
         let rowCount = 1;
+        let products = []; // Store products loaded from API
 
         function formatIntervalLabel(interval) {
             if (!interval) return 'monthly';
@@ -467,24 +453,9 @@
                                    autocomplete="off" placeholder="Type to search services...">
                             <div id="serviceDropdown${rowCount}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                 <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Catch-up Bookkeeping</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (LLC)</div>
-                                                <div class="text-sm text-gray-500">$1.99</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (S-Corp)</div>
-                                                <div class="text-sm text-gray-500">$2.01</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19" data-subscription="true" data-interval="monthly">
-                                                <div class="font-medium">Monthly Bookkeeping Subscription</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
+                                    <!-- Products will be dynamically inserted here -->
                                     <div class="border-t border-gray-200 mt-2 pt-2">
-                                        <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
+                                        <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium" style="display: none;">
                                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                             </svg>
@@ -539,6 +510,13 @@
             `;
             
             serviceRows.appendChild(newRow);
+            
+            // Update dropdown with products
+            const dropdown = document.getElementById(`serviceDropdown${rowCount}`);
+            if (dropdown) {
+                updateDropdown(dropdown, rowCount);
+            }
+            
             rowCount++;
             
             // Show remove buttons for all rows if there's more than one
@@ -764,15 +742,26 @@
                     const price = serviceOption.getAttribute('data-price');
                     const isSubscription = serviceOption.getAttribute('data-subscription') === 'true';
                     const interval = serviceOption.getAttribute('data-interval') || undefined;
+                    const description = serviceOption.getAttribute('data-description') || '';
                     
                     input.value = value;
                     dropdown.classList.add('hidden');
                     
                     const serviceRow = input.closest('.service-row');
-                    if (serviceRow && price) {
-                        const unitCostInput = serviceRow.querySelector(`input[name="unitCost${rowIndex}"]`);
-                        if (unitCostInput) {
-                            unitCostInput.value = price;
+                    if (serviceRow) {
+                        if (price) {
+                            const unitCostInput = serviceRow.querySelector(`input[name="unitCost${rowIndex}"]`);
+                            if (unitCostInput) {
+                                unitCostInput.value = price;
+                            }
+                        }
+                        
+                        // Auto-populate description if available
+                        if (description) {
+                            const descriptionTextarea = serviceRow.querySelector(`textarea[name="description${rowIndex}"]`);
+                            if (descriptionTextarea) {
+                                descriptionTextarea.value = description;
+                            }
                         }
                     }
                     
@@ -835,8 +824,74 @@
             });
         }
 
+        // Load products from API
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const data = await response.json();
+                if (data.success && data.products) {
+                    products = data.products.filter(p => p.isActive !== false);
+                    // Update all dropdowns with loaded products
+                    updateAllDropdowns();
+                } else {
+                    console.error('Failed to load products:', data);
+                    // Fallback to empty array
+                    products = [];
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+                // Fallback to empty array
+                products = [];
+            }
+        }
+
+        // Update dropdown with products
+        function updateDropdown(dropdown, rowIndex) {
+            if (!dropdown) return;
+            
+            const dropdownContent = dropdown.querySelector('.p-2');
+            if (!dropdownContent) return;
+
+            // Clear existing service options (keep the add-service-option)
+            const existingOptions = dropdownContent.querySelectorAll('.service-option');
+            existingOptions.forEach(option => option.remove());
+
+            // Add products to dropdown
+            products.forEach(product => {
+                const option = document.createElement('div');
+                option.className = 'service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded';
+                option.setAttribute('data-value', product.name);
+                option.setAttribute('data-price', product.unitPrice.toString());
+                option.setAttribute('data-subscription', product.isSubscription ? 'true' : 'false');
+                option.setAttribute('data-interval', product.subscriptionInterval || '');
+                option.setAttribute('data-description', product.description || '');
+                
+                option.innerHTML = `
+                    <div class="font-medium">${product.name}</div>
+                    <div class="text-sm text-gray-500">$${product.unitPrice.toFixed(2)}</div>
+                    ${product.description ? `<div class="text-xs text-gray-400 mt-1">${product.description}</div>` : ''}
+                `;
+                
+                dropdownContent.insertBefore(option, dropdownContent.querySelector('.border-t'));
+            });
+        }
+
+        // Update all dropdowns
+        function updateAllDropdowns() {
+            const rows = document.querySelectorAll('.service-row');
+            rows.forEach((row, index) => {
+                const dropdown = document.getElementById(`serviceDropdown${index}`);
+                if (dropdown) {
+                    updateDropdown(dropdown, index);
+                }
+            });
+        }
+
         // Load data from URL parameters on page load
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
+            // Load products from API first
+            await loadProducts();
+            
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.toString()) {

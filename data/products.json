@@ -1,0 +1,64 @@
+{
+  "products": [
+    {
+      "id": "catch-up-bookkeeping",
+      "name": "Catch-up Bookkeeping",
+      "description": "Comprehensive catch-up bookkeeping services to get your records up to date",
+      "unitPrice": 2.19,
+      "category": "Bookkeeping",
+      "isSubscription": false,
+      "subscriptionInterval": null,
+      "isActive": true,
+      "createdAt": "2025-01-15T00:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "tax-return-llc",
+      "name": "Tax Return (LLC)",
+      "description": "Complete tax return preparation for LLC entities",
+      "unitPrice": 1.99,
+      "category": "Tax Services",
+      "isSubscription": false,
+      "subscriptionInterval": null,
+      "isActive": true,
+      "createdAt": "2025-01-15T00:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "tax-return-s-corp",
+      "name": "Tax Return (S-Corp)",
+      "description": "Complete tax return preparation for S-Corporation entities",
+      "unitPrice": 2.01,
+      "category": "Tax Services",
+      "isSubscription": false,
+      "subscriptionInterval": null,
+      "isActive": true,
+      "createdAt": "2025-01-15T00:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "monthly-bookkeeping-subscription",
+      "name": "Monthly Bookkeeping Subscription",
+      "description": "Ongoing monthly bookkeeping services",
+      "unitPrice": 2.19,
+      "category": "Bookkeeping",
+      "isSubscription": true,
+      "subscriptionInterval": "monthly",
+      "isActive": true,
+      "createdAt": "2025-01-15T00:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z"
+    },
+    {
+      "name": "Test Product",
+      "description": "This is a product I'm testing",
+      "unitPrice": 1.89,
+      "category": "Bookkeeping Test Product",
+      "isSubscription": false,
+      "subscriptionInterval": null,
+      "isActive": false,
+      "id": "test-product",
+      "createdAt": "2025-11-12T23:22:19.615Z",
+      "updatedAt": "2025-11-12T23:22:44.466Z"
+    }
+  ]
+}
