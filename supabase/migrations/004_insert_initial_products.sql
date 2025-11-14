@@ -35,7 +35,7 @@ VALUES
   ),
   (
     'monthly-bookkeeping-subscription',
-    'Monthly Bookkeeping Subscription',
+    'Monthly Bookkeeping Sub',
     'Ongoing monthly bookkeeping services',
     2.19,
     'Bookkeeping',
