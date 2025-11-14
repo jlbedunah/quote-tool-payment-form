@@ -31,7 +31,14 @@ export default async function handler(req, res) {
             if (eventType.startsWith('net.authorize.payment.')) {
                 switch (eventType) {
                     case 'net.authorize.payment.authcapture.created':
+                        console.log('Calling syncAuthorizeNetTransaction for payment webhook...');
                         synchronizationResult = await syncAuthorizeNetTransaction(eventBody);
+                        console.log('Synchronization result:', JSON.stringify(synchronizationResult, null, 2));
+                        if (synchronizationResult?.quoteUpdate) {
+                            console.log('Quote update result:', synchronizationResult.quoteUpdate);
+                        } else {
+                            console.log('No quote update in synchronization result');
+                        }
                         break;
 
                     case 'net.authorize.payment.authcapture.failed':
