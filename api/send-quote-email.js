@@ -1,5 +1,8 @@
 import { Resend } from 'resend';
 import { findOrCreateContact, appendNoteToContact, addTagsToContact } from '../lib/gohighlevel.js';
+import { supabase } from '../lib/supabase.js';
+import { verifyAuth } from '../lib/auth-middleware.js';
+import { randomUUID } from 'crypto';
 
 // Check if API key is available
 if (!process.env.RESEND_API_KEY) {
@@ -9,12 +12,30 @@ if (!process.env.RESEND_API_KEY) {
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export default async function handler(req, res) {
-  // Check for protection bypass token
+  // Check for protection bypass token OR authentication
   const bypassToken = req.headers['x-vercel-protection-bypass'];
   const expectedBypassToken = process.env.VERCEL_PROTECTION_BYPASS;
+  const authHeader = req.headers.authorization;
   
-  if (expectedBypassToken && bypassToken !== expectedBypassToken) {
-    return res.status(401).json({ error: 'Unauthorized - Invalid bypass token' });
+  let user = null;
+  
+  // Try authentication first (but don't fail if it doesn't work - allow bypass token)
+  if (authHeader) {
+    try {
+      // Use verifyAuth directly instead of requireAuth to avoid response issues
+      const authResult = await verifyAuth(req);
+      if (authResult && !authResult.error) {
+        user = authResult.user;
+      }
+    } catch (error) {
+      // Auth failed, try bypass token
+      console.log('Auth check failed, trying bypass token');
+    }
+  }
+  
+  // If no auth, check bypass token
+  if (!user && expectedBypassToken && bypassToken !== expectedBypassToken) {
+    return res.status(401).json({ error: 'Unauthorized - Invalid bypass token or authentication required' });
   }
 
   // Only allow POST requests
@@ -63,6 +84,67 @@ export default async function handler(req, res) {
 
     console.log('Email sent successfully:', data);
 
+    // Generate payment link
+    const paymentLink = generatePaymentLink(quoteData);
+
+    // Save quote to database
+    let savedQuote = null;
+    if (supabase) {
+      try {
+        // Generate quote number using database function
+        const { data: quoteNumberData, error: quoteNumberError } = await supabase
+          .rpc('generate_quote_number');
+
+        const quoteNumber = quoteNumberError ? `Q-${new Date().getFullYear()}-${Date.now()}` : quoteNumberData;
+
+        // Prepare quote data for database
+        const quoteToSave = {
+          id: randomUUID(),
+          quote_number: quoteNumber,
+          status: 'emailed',
+          customer_first_name: quoteData.firstName || '',
+          customer_last_name: quoteData.lastName || '',
+          customer_email: recipientEmail || quoteData.email || '',
+          customer_phone: quoteData.phone || null,
+          customer_company_name: quoteData.companyName || null,
+          customer_address1: quoteData.address1 || null,
+          customer_address2: quoteData.address2 || null,
+          customer_city: quoteData.city || null,
+          customer_state: quoteData.state || null,
+          customer_zip: quoteData.zip || null,
+          services: quoteData.services || [],
+          totals: {
+            one_time_total: parseFloat(quoteData.oneTimeTotal || quoteData.grandTotal || 0),
+            subscription_monthly_total: parseFloat(quoteData.subscriptionMonthlyTotal || 0),
+            grand_total: parseFloat(quoteData.grandTotal || quoteData.oneTimeTotal || 0)
+          },
+          delivery_method: 'email',
+          payment_link: paymentLink,
+          email_sent_at: new Date().toISOString(),
+          email_recipient: recipientEmail,
+          email_message_id: data.id,
+          payment_status: 'pending',
+          created_by_user_id: user?.id || null
+        };
+
+        const { data: savedQuoteData, error: saveError } = await supabase
+          .from('quotes')
+          .insert(quoteToSave)
+          .select()
+          .single();
+
+        if (saveError) {
+          console.error('Error saving quote to database:', saveError);
+        } else {
+          savedQuote = savedQuoteData;
+          console.log('Quote saved to database:', savedQuote.id);
+        }
+      } catch (saveError) {
+        console.error('Error saving quote:', saveError);
+        // Don't fail the email send if quote save fails
+      }
+    }
+
     // Sync to GHL after email is sent successfully
     let ghlSyncResult = null;
     try {
@@ -80,6 +162,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ 
       success: true, 
       messageId: data.id,
+      quoteId: savedQuote?.id || null,
       ghlSync: ghlSyncResult
     });
 
