@@ -48,8 +48,30 @@ To separate dev and production data, use separate Supabase projects. The code au
 
 ### 2. Run Migrations on Dev Database
 
+**Option A: Using Supabase CLI (Recommended)**
+
+1. **Link your dev project to Supabase CLI:**
+   ```bash
+   supabase link --project-ref dwpohbuiangfgegefwgo
+   ```
+   (Replace `dwpohbuiangfgegefwgo` with your dev project's reference ID if different)
+   
+   You'll be prompted to:
+   - Enter your database password (the one you set when creating the dev project)
+   - Confirm the project
+
+2. **Run all migrations:**
+   ```bash
+   supabase db push
+   ```
+   
+   This will run all migrations in `supabase/migrations/` in order automatically.
+
+**Option B: Using SQL Editor (Manual)**
+
 1. In your dev Supabase project, go to **SQL Editor**
 2. Run all migrations from `supabase/migrations/` in order:
+   - `000_create_user_profiles_table.sql` (creates user_profiles table)
    - `001_create_products_table.sql`
    - `002_create_quotes_table.sql`
    - `003_enable_rls_and_policies.sql`
@@ -59,6 +81,8 @@ To separate dev and production data, use separate Supabase projects. The code au
    - `007_add_user_id_to_quotes.sql`
    - `008_create_initial_admin.sql` (optional - only if you want a dev admin user)
    - `009_fix_user_profiles_rls_recursion.sql`
+
+**Note:** The Supabase CLI connection is separate from Vercel's Supabase integration. Linking to your dev project with the CLI won't affect Vercel's connection to production.
 
 ### 3. Create Admin User in Dev Database
 
