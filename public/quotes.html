@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fef2f2',
+                            500: '#CA1824',
+                            600: '#B0151F',
+                            700: '#96121A',
+                        },
+                        brand: '#CA1824'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Navigation Menu -->
+    <script type="module" src="/lib/navigation-menu.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md mb-6 p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Quotes</h1>
+                    <p class="text-gray-600 mt-1" id="pageDescription">View and manage quotes</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quotes Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote #</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quotesTableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">Loading quotes...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let quotes = [];
+        let currentUser = null;
+
+        // Load quotes on page load
+        window.addEventListener('load', async function() {
+            // Initialize navigation menu with authentication check
+            try {
+                const { initNavigationWithAuth } = await import('/lib/navigation-menu.js');
+                currentUser = await initNavigationWithAuth();
+                
+                if (!currentUser) {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Update page description based on user role
+                const descriptionEl = document.getElementById('pageDescription');
+                if (currentUser.is_admin) {
+                    descriptionEl.textContent = 'View and manage all quotes';
+                } else {
+                    descriptionEl.textContent = 'View and manage your quotes';
+                }
+            } catch (error) {
+                console.error('Error initializing navigation:', error);
+                // If navigation fails, redirect to login
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            loadQuotes();
+        });
+
+        // Load quotes from API
+        async function loadQuotes() {
+            try {
+                const accessToken = localStorage.getItem('supabase_access_token');
+                const response = await fetch('/api/quotes', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    quotes = data.quotes || [];
+                    renderQuotes();
+                } else {
+                    showError(data.error || 'Failed to load quotes');
+                }
+            } catch (error) {
+                console.error('Error loading quotes:', error);
+                showError('Error loading quotes: ' + error.message);
+            }
+        }
+
+        // Render quotes table
+        function renderQuotes() {
+            const tbody = document.getElementById('quotesTableBody');
+            
+            if (quotes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No quotes found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = quotes.map(quote => {
+                const createdDate = new Date(quote.created_at).toLocaleDateString();
+                const totals = quote.totals || {};
+                const amount = totals.grand_total || totals.one_time_total || 0;
+                
+                const paymentStatusBadge = {
+                    'pending': '<span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">Pending</span>',
+                    'paid': '<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">Paid</span>',
+                    'failed': '<span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">Failed</span>',
+                    'refunded': '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Refunded</span>'
+                }[quote.payment_status] || '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Unknown</span>';
+
+                const deliveryMethodBadge = {
+                    'payment_link': '<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">Payment Link</span>',
+                    'email': '<span class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">Email</span>'
+                }[quote.delivery_method] || '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Unknown</span>';
+
+                // Check if user can edit/delete this quote
+                const canEdit = currentUser && (currentUser.is_admin || quote.created_by_user_id === currentUser.id);
+                const editDeleteButtons = canEdit ? `
+                    <button onclick="editQuote('${quote.id}')" class="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
+                    <button onclick="deleteQuote('${quote.id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                ` : '';
+
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${quote.quote_number || quote.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${quote.customer_first_name} ${quote.customer_last_name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${quote.customer_email}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${deliveryMethodBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${paymentStatusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$${parseFloat(amount).toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${createdDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="viewQuote('${quote.id}')" class="text-red-600 hover:text-red-900 mr-3">View</button>
+                            ${editDeleteButtons}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // View quote details
+        function viewQuote(quoteId) {
+            const quote = quotes.find(q => q.id === quoteId);
+            if (!quote) return;
+
+            const services = quote.services || [];
+            const servicesList = services.map((service, index) => {
+                const serviceName = service[`productName${index}`] || service.productName || 'Service';
+                const quantity = service[`quantity${index}`] || service.quantity || '1';
+                const unitCost = service[`unitCost${index}`] || service.unitCost || '0';
+                const subtotal = service[`subtotal${index}`] || service.subtotal || '0';
+                return `${serviceName} (Qty: ${quantity}) - $${parseFloat(subtotal).toFixed(2)}`;
+            }).join('\n');
+
+            const totals = quote.totals || {};
+            const oneTimeTotal = totals.one_time_total || 0;
+            const subscriptionTotal = totals.subscription_monthly_total || 0;
+            const grandTotal = totals.grand_total || oneTimeTotal;
+
+            alert(`Quote Details:\n\n` +
+                `Quote #: ${quote.quote_number || quote.id}\n` +
+                `Customer: ${quote.customer_first_name} ${quote.customer_last_name}\n` +
+                `Email: ${quote.customer_email}\n` +
+                `Phone: ${quote.customer_phone || 'N/A'}\n` +
+                `Company: ${quote.customer_company_name || 'N/A'}\n` +
+                `Delivery Method: ${quote.delivery_method}\n` +
+                `Payment Status: ${quote.payment_status}\n` +
+                `\nServices:\n${servicesList}\n\n` +
+                `One-Time Total: $${parseFloat(oneTimeTotal).toFixed(2)}\n` +
+                (subscriptionTotal > 0 ? `Monthly Subscription: $${parseFloat(subscriptionTotal).toFixed(2)}\n` : '') +
+                `Grand Total: $${parseFloat(grandTotal).toFixed(2)}\n` +
+                `\nCreated: ${new Date(quote.created_at).toLocaleString()}`
+            );
+        }
+
+        // Edit quote
+        function editQuote(quoteId) {
+            const quote = quotes.find(q => q.id === quoteId);
+            if (!quote) return;
+            
+            // For now, just show an alert. You can implement a full edit modal later
+            alert('Edit functionality coming soon. Quote ID: ' + quoteId);
+        }
+
+        // Delete quote
+        async function deleteQuote(quoteId) {
+            const quote = quotes.find(q => q.id === quoteId);
+            if (!quote) return;
+
+            if (!confirm(`Are you sure you want to delete quote ${quote.quote_number || quoteId}?`)) {
+                return;
+            }
+
+            try {
+                const accessToken = localStorage.getItem('supabase_access_token');
+                const response = await fetch(`/api/quotes?id=${quoteId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    loadQuotes();
+                    showSuccess('Quote deleted successfully');
+                } else {
+                    showError(data.error || 'Failed to delete quote');
+                }
+            } catch (error) {
+                console.error('Error deleting quote:', error);
+                showError('Error deleting quote: ' + error.message);
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            alert(message);
+        }
+
+        // Show error message
+        function showError(message) {
+            alert('Error: ' + message);
+        }
+    </script>
+</body>
+</html>
+

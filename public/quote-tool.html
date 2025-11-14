@@ -41,6 +41,8 @@
             }
         }
     </script>
+    <!-- Navigation Menu -->
+    <script type="module" src="/lib/navigation-menu.js"></script>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
     <div class="max-w-6xl mx-auto p-6">
@@ -623,10 +625,13 @@
             }
         }
 
-        function buildLink() {
+        async function buildLink() {
             const form = document.getElementById('quoteForm');
             const formData = new FormData(form);
             const params = new URLSearchParams();
+            
+            // Collect quote data for saving
+            const quoteData = {};
             
             // Add customer information
             const customerFields = ['firstName', 'lastName', 'companyName', 'email', 'phone', 'address1', 'address2', 'city', 'state', 'zip'];
@@ -635,39 +640,55 @@
                 const value = formData.get(field);
                 if (value) {
                     params.append(field, value);
+                    quoteData[field] = value;
                 }
             });
             totalsFields.forEach(field => {
                 const value = formData.get(field);
                 if (value !== null && value !== undefined) {
                     params.append(field, value);
+                    quoteData[field] = value;
                 }
             });
             
             // Add service details
             const rows = document.querySelectorAll('.service-row');
+            quoteData.services = [];
             rows.forEach((row, index) => {
                 const rowData = row.querySelectorAll('input, textarea');
                 const rowIndexAttr = row.getAttribute('data-row');
+                const service = {};
                 rowData.forEach(input => {
                     if (input.type === 'hidden') {
                         if (input.name.startsWith('isSubscription')) {
                             if (input.value === 'true') {
                                 params.append(input.name, 'true');
+                                service[input.name] = 'true';
                             }
                         } else if (input.name.startsWith('subscriptionInterval')) {
                             const flag = rowIndexAttr !== null ? row.querySelector(`input[name="isSubscription${rowIndexAttr}"]`) : null;
                             if (flag && flag.value === 'true' && input.value) {
                                 params.append(input.name, input.value);
+                                service[input.name] = input.value;
                             }
                         } else if (input.value) {
                             params.append(input.name, input.value);
+                            service[input.name] = input.value;
                         }
                     } else if (input.value) {
                         params.append(input.name, input.value);
+                        service[input.name] = input.value;
                     }
                 });
+                if (Object.keys(service).length > 0) {
+                    quoteData.services.push(service);
+                }
             });
+            
+            // Add totals
+            quoteData.oneTimeTotal = document.getElementById('oneTimeTotal')?.textContent || '0.00';
+            quoteData.subscriptionMonthlyTotal = document.getElementById('subscriptionTotal')?.textContent || '0.00';
+            quoteData.grandTotal = document.getElementById('grandTotal')?.textContent || '0.00';
             
             // Generate the URL - ensure it points to payment-form-robust.html
             let baseUrl;
@@ -678,6 +699,34 @@
                 baseUrl = window.location.origin + '/payment-form-robust.html';
             }
             const fullUrl = baseUrl + '?' + params.toString();
+            
+            // Save quote to database
+            try {
+                const accessToken = localStorage.getItem('supabase_access_token');
+                if (accessToken) {
+                    const saveResponse = await fetch('/api/quotes', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            ...quoteData,
+                            delivery_method: 'payment_link',
+                            payment_link: fullUrl
+                        })
+                    });
+                    
+                    if (saveResponse.ok) {
+                        console.log('Quote saved to database');
+                    } else {
+                        console.error('Failed to save quote:', await saveResponse.json());
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving quote:', error);
+                // Don't block the link generation if save fails
+            }
             
             // Copy to clipboard and redirect
             navigator.clipboard.writeText(fullUrl).then(() => {
@@ -836,7 +885,18 @@
         }
 
         // Load data from URL parameters on page load
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
+            // Initialize navigation menu with authentication check
+            try {
+                const { initNavigationWithAuth } = await import('/lib/navigation-menu.js');
+                await initNavigationWithAuth();
+            } catch (error) {
+                console.error('Error initializing navigation:', error);
+                // If navigation fails, redirect to login
+                window.location.href = '/login.html';
+                return;
+            }
+            
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.toString()) {
@@ -973,13 +1033,22 @@
                 emailData.quoteData.subscriptionMonthlyTotal = document.getElementById('subscriptionTotal')?.textContent || '0.00';
                 emailData.quoteData.grandTotal = document.getElementById('grandTotal')?.textContent || '0.00';
                 
-                // Send to serverless function with bypass token
+                // Send to serverless function with authentication
+                const accessToken = localStorage.getItem('supabase_access_token');
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Add auth header if available, otherwise use bypass token
+                if (accessToken) {
+                    headers['Authorization'] = `Bearer ${accessToken}`;
+                } else {
+                    headers['x-vercel-protection-bypass'] = 'F9A72B1C8E5D4F0A6C3B7E2D9A8F5C1E';
+                }
+                
                 const response = await fetch('/api/send-quote-email', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-vercel-protection-bypass': 'F9A72B1C8E5D4F0A6C3B7E2D9A8F5C1E'
-                    },
+                    headers: headers,
                     body: JSON.stringify(emailData)
                 });
                 

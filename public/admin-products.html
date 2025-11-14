@@ -22,6 +22,8 @@
             }
         }
     </script>
+    <!-- Navigation Menu -->
+    <script type="module" src="/lib/navigation-menu.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="max-w-7xl mx-auto p-6">
@@ -190,7 +192,25 @@
         let editingProductId = null;
 
         // Load products on page load
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
+            // Initialize navigation menu with authentication check
+            try {
+                const { initNavigationWithAuth } = await import('/lib/navigation-menu.js');
+                const user = await initNavigationWithAuth();
+                
+                // Check if user is admin (admin pages require admin access)
+                if (!user || !user.is_admin) {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '/quote-tool.html';
+                    return;
+                }
+            } catch (error) {
+                console.error('Error initializing navigation:', error);
+                // If navigation fails, redirect to login
+                window.location.href = '/login.html';
+                return;
+            }
+            
             loadProducts();
         });
 

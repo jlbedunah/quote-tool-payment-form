@@ -25,14 +25,23 @@
     </script>
     
     <script>
-        // Redirect to quote tool
-        window.location.href = './quote-tool.html';
+        // Check if user is logged in, redirect accordingly
+        const accessToken = localStorage.getItem('supabase_access_token');
+        const userData = localStorage.getItem('current_user');
+        
+        if (accessToken && userData) {
+            // User appears to be logged in, redirect to quote tool
+            window.location.href = './quote-tool.html';
+        } else {
+            // User not logged in, redirect to login
+            window.location.href = './login.html';
+        }
     </script>
 </head>
 <body>
     <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h2>Redirecting to Quote Tool...</h2>
-        <p>If you are not redirected automatically, <a href="./quote-tool.html">click here</a>.</p>
+        <h2>Redirecting...</h2>
+        <p>If you are not redirected automatically, <a href="./login.html">click here to login</a>.</p>
     </div>
 </body>
 </html>
