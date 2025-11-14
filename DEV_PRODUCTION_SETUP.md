@@ -77,8 +77,8 @@ To separate dev and production data, use separate Supabase projects. The code au
    - `003_enable_rls_and_policies.sql`
    - `004_insert_initial_products.sql`
    - `005_enable_user_profiles_rls.sql`
-   - `006_update_quotes_rls_for_users.sql`
-   - `007_add_user_id_to_quotes.sql`
+   - `006_add_user_id_to_quotes.sql` (adds created_by_user_id column)
+   - `007_update_quotes_rls_for_users.sql` (uses created_by_user_id in policies)
    - `008_create_initial_admin.sql` (optional - only if you want a dev admin user)
    - `009_fix_user_profiles_rls_recursion.sql`
 
