@@ -1,13 +1,16 @@
-import { supabase } from '../../lib/supabase.js';
-import { createClient } from '@supabase/supabase-js';
-
 export default async function handler(req, res) {
+  // Set content type to JSON immediately
+  res.setHeader('Content-Type', 'application/json');
+  
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    // Import dependencies inside try block to catch import errors
+    const { supabase } = await import('../../lib/supabase.js');
+    const { createClient } = await import('@supabase/supabase-js');
     const { email, password } = req.body;
 
     // Validate input
@@ -101,11 +104,23 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Login error:', error);
     console.error('Error stack:', error.stack);
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message || 'An error occurred during login',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    
+    // Ensure we always return JSON, even on error
+    try {
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message || 'An error occurred during login',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        type: error.name || 'Error'
+      });
+    } catch (jsonError) {
+      // If JSON response fails, log and return plain text
+      console.error('Failed to send JSON response:', jsonError);
+      return res.status(500).send(JSON.stringify({ 
+        success: false, 
+        error: 'An error occurred during login' 
+      }));
+    }
   }
 }
 
