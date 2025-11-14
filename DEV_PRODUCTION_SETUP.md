@@ -5,7 +5,39 @@ To separate dev and production data, use separate Supabase projects. The code au
 
 ## Setup Steps
 
-### 1. Create Dev Supabase Project
+### Option A: Using Vercel's Supabase Integration (Recommended)
+
+#### 1. Connect Supabase to Vercel
+
+1. Go to your Vercel project dashboard
+2. Go to **Settings** → **Integrations**
+3. Search for "Supabase" and click **Add Integration**
+4. Authorize the connection
+5. You can either:
+   - **Create a new Supabase project** (for dev)
+   - **Connect an existing Supabase project** (for production)
+
+#### 2. Set Up Production Database
+
+1. In Vercel → **Settings** → **Integrations** → **Supabase**
+2. Connect your **production** Supabase project
+3. Vercel will automatically set environment variables for **Production** environment:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_ANON_KEY`
+
+#### 3. Set Up Dev Database
+
+1. Create a new Supabase project for dev (either via Vercel integration or Supabase dashboard)
+2. In Vercel → **Settings** → **Integrations** → **Supabase**
+3. You may need to disconnect and reconnect, OR
+4. Manually set environment variables for **Preview** and **Development** environments:
+   - Go to **Settings** → **Environment Variables**
+   - Add the dev Supabase credentials and select **Preview** and **Development** only
+
+### Option B: Manual Setup (Alternative)
+
+#### 1. Create Dev Supabase Project
 
 1. Go to [Supabase Dashboard](https://app.supabase.com)
 2. Click "New Project"
@@ -52,15 +84,23 @@ VALUES (
 );
 ```
 
-### 4. Get Dev Supabase Credentials
+### 4. Get Supabase Credentials (if not using Vercel integration)
 
-1. In your dev Supabase project, go to **Settings** → **API**
+If you're setting up manually or need to override the integration:
+
+1. In your Supabase project, go to **Settings** → **API**
 2. Copy:
    - **Project URL** (this is `SUPABASE_URL`)
    - **service_role key** (this is `SUPABASE_SERVICE_ROLE_KEY`) - **Keep this secret!**
    - **anon public key** (this is `SUPABASE_ANON_KEY`)
 
 ### 5. Configure Vercel Environment Variables
+
+**If using Vercel Supabase Integration:**
+- The integration automatically sets variables for the connected project
+- You may need to manually set different values for Preview/Development if you want separate databases
+
+**If setting up manually:**
 
 1. Go to your Vercel project dashboard
 2. Go to **Settings** → **Environment Variables**
@@ -76,6 +116,8 @@ VALUES (
   - `SUPABASE_URL` = Your dev Supabase project URL
   - `SUPABASE_SERVICE_ROLE_KEY` = Your dev service_role key
   - `SUPABASE_ANON_KEY` = Your dev anon key
+
+**Note:** If you use Vercel's Supabase integration, it will set these automatically for the connected project. You can still override them manually for different environments if needed.
 
 ### 6. Redeploy
 
