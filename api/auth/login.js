@@ -11,22 +11,30 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Log that we're starting the login process
+    console.log('Login attempt started');
+    
     const { email, password } = req.body;
 
     // Validate input
     if (!email || !password) {
+      console.log('Login failed: Missing email or password');
       return res.status(400).json({ 
         success: false, 
         error: 'Email and password are required' 
       });
     }
 
+    console.log('Checking Supabase configuration...');
     if (!supabase) {
+      console.error('Supabase client is null - check environment variables');
       return res.status(500).json({ 
         success: false, 
-        error: 'Authentication service not configured' 
+        error: 'Authentication service not configured. Please check server configuration.' 
       });
     }
+    
+    console.log('Supabase client available, attempting sign in...');
 
     // Sign in with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
