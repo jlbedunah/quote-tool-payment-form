@@ -1,3 +1,6 @@
+import { supabase } from '../../lib/supabase.js';
+import { createClient } from '@supabase/supabase-js';
+
 export default async function handler(req, res) {
   // Set content type to JSON immediately
   res.setHeader('Content-Type', 'application/json');
@@ -8,9 +11,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Import dependencies inside try block to catch import errors
-    const { supabase } = await import('../../lib/supabase.js');
-    const { createClient } = await import('@supabase/supabase-js');
     const { email, password } = req.body;
 
     // Validate input
