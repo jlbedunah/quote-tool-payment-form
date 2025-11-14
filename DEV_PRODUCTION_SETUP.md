@@ -84,6 +84,11 @@ To separate dev and production data, use separate Supabase projects. The code au
 
 **Note:** The Supabase CLI connection is separate from Vercel's Supabase integration. Linking to your dev project with the CLI won't affect Vercel's connection to production.
 
+**Troubleshooting:** If migrations fail partway through:
+1. Go to Supabase Dashboard → SQL Editor
+2. Run `supabase/migrations/FIX_MIGRATION_STATE.sql` to fix the database state
+3. Then continue with remaining migrations manually, or re-run `supabase db push` (it will skip completed migrations)
+
 ### 3. Create Admin User in Dev Database
 
 1. In Supabase Dashboard → **Authentication** → **Users**
