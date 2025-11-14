@@ -1,6 +1,3 @@
-import { supabase } from '../../lib/supabase.js';
-import { createClient } from '@supabase/supabase-js';
-
 export default async function handler(req, res) {
   // Set content type to JSON immediately
   res.setHeader('Content-Type', 'application/json');
@@ -8,6 +5,23 @@ export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  let supabase, createClient;
+  
+  try {
+    // Import dependencies inside handler to catch import errors
+    const supabaseModule = await import('../../lib/supabase.js');
+    const supabaseJsModule = await import('@supabase/supabase-js');
+    supabase = supabaseModule.supabase;
+    createClient = supabaseJsModule.createClient;
+  } catch (importError) {
+    console.error('Failed to import dependencies:', importError);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Server configuration error',
+      details: process.env.NODE_ENV === 'development' ? importError.message : undefined
+    });
   }
 
   try {
