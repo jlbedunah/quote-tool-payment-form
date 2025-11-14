@@ -96,6 +96,8 @@ If you're setting up manually or need to override the integration:
 
 ### 5. Configure Vercel Environment Variables
 
+**Important:** Do NOT use `NEXT_PUBLIC_` prefix. This is not a Next.js project, and all environment variables are server-side only (accessed via API routes).
+
 **If using Vercel Supabase Integration:**
 - The integration automatically sets variables for the connected project
 - You may need to manually set different values for Preview/Development if you want separate databases
@@ -112,10 +114,16 @@ If you're setting up manually or need to override the integration:
   - `SUPABASE_ANON_KEY` = Your production anon key
 
 #### For Preview/Development:
-- Add/Update these variables and select **Preview** and **Development**:
+- Add/Update these variables with the **same names** but **different values**, and select **Preview** and **Development**:
   - `SUPABASE_URL` = Your dev Supabase project URL
   - `SUPABASE_SERVICE_ROLE_KEY` = Your dev service_role key
   - `SUPABASE_ANON_KEY` = Your dev anon key
+
+**How it works:**
+- Vercel uses the same variable names (`SUPABASE_URL`, etc.) but different values based on the deployment environment
+- Production deployments automatically use Production environment variables
+- Preview/Development deployments automatically use Preview/Development environment variables
+- No prefix needed - Vercel handles environment separation automatically
 
 **Note:** If you use Vercel's Supabase integration, it will set these automatically for the connected project. You can still override them manually for different environments if needed.
 
