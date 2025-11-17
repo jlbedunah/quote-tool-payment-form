@@ -1,4 +1,5 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
+import { syncAuthorizeNetSubscription } from '../lib/authorize-net-sync.js';
 
 export default async function handler(req, res) {
     // Only allow POST requests
@@ -51,6 +52,34 @@ export default async function handler(req, res) {
 
                     default:
                         console.log('Unknown payment event type:', eventType);
+                }
+            }
+            // Handle subscription events
+            else if (eventType.startsWith('net.authorize.customer.subscription.')) {
+                switch (eventType) {
+                    case 'net.authorize.customer.subscription.created':
+                        console.log('Calling syncAuthorizeNetSubscription for subscription creation webhook...');
+                        synchronizationResult = await syncAuthorizeNetSubscription(eventBody);
+                        console.log('Subscription sync result:', JSON.stringify(synchronizationResult, null, 2));
+                        break;
+
+                    case 'net.authorize.customer.subscription.cancelled':
+                        console.log('Subscription cancelled:', eventBody.payload);
+                        // Could add cancellation sync here if needed
+                        break;
+
+                    case 'net.authorize.customer.subscription.suspended':
+                        console.log('Subscription suspended:', eventBody.payload);
+                        // Could add suspension sync here if needed
+                        break;
+
+                    case 'net.authorize.customer.subscription.terminated':
+                        console.log('Subscription terminated:', eventBody.payload);
+                        // Could add termination sync here if needed
+                        break;
+
+                    default:
+                        console.log('Unknown subscription event type:', eventType);
                 }
             }
             // Unknown event type - log for debugging
