@@ -514,8 +514,8 @@ ${paymentLink}`;
   // Add note to contact
   await appendNoteToContact(contactId, noteBody);
 
-  // Add tag
-  await addTagsToContact(contactId, ['email-quote-sent']);
+  // Add tags: specific tag for email quotes + generic tag for all quotes
+  await addTagsToContact(contactId, ['email-quote-sent', 'quote-created']);
 
   return {
     success: true,
