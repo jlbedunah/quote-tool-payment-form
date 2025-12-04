@@ -1,202 +1,161 @@
-# GHL Tags Reference
+# GoHighLevel Tags Reference
 
-## Overview
+This document lists all tags that are automatically added to GoHighLevel contacts and when/why they are added.
 
-This document lists all tags that are applied to GoHighLevel (GHL) contact records when payments are processed via Authorize.net.
+## Tag Categories
 
-## Payment Transaction Tags
+### 1. Quote Creation Tags
 
-When a payment is successfully processed via Authorize.net (`net.authorize.payment.authcapture.created`):
+#### `quote-created` (Generic)
+- **When**: Added whenever a quote is created, regardless of delivery method
+- **Where**: 
+  - `api/quotes.js` (Build Link path)
+  - `api/send-quote-email.js` (Email path)
+- **Why**: Universal tag to identify all contacts who have received quotes
+- **Always paired with**: Either `link-quote-created` or `email-quote-sent`
 
-### Static Tags (Always Applied)
-- ✅ `authorize.net`
-- ✅ `sold bookkeeping project`
+#### `link-quote-created`
+- **When**: When a quote is created via "Build Link" button in the quote tool
+- **Where**: `api/quotes.js` → `syncLinkQuoteToGHL()`
+- **Why**: Identifies quotes created via payment link (not emailed)
+- **Paired with**: `quote-created`
 
-### Product Tags (Based on Line Items)
-- ✅ Product name tags (slugified)
-  - Example: `tax-return-s-corp` (from "Tax Return (S-Corp)")
-  - Example: `catch-up-bookkeeping` (from "Catch-up Bookkeeping")
-  - Example: `monthly-bookkeeping-subscription` (from "Monthly Bookkeeping Subscription")
+#### `email-quote-sent`
+- **When**: When a quote is sent via email
+- **Where**: `api/send-quote-email.js` → `syncQuoteToGHL()`
+- **Why**: Identifies quotes that were emailed to customers
+- **Paired with**: `quote-created`
 
-### Tag Examples
+---
 
-**Example 1: Single Product Purchase**
-- Product: "Tax Return (S-Corp)"
-- Tags Applied:
-  - `authorize.net`
-  - `sold bookkeeping project`
-  - `tax-return-s-corp`
+### 2. Payment Tags
 
-**Example 2: Multiple Products Purchase**
-- Products: "Tax Return (S-Corp)", "Catch-up Bookkeeping"
-- Tags Applied:
-  - `authorize.net`
-  - `sold bookkeeping project`
-  - `tax-return-s-corp`
+#### `quote-paid`
+- **When**: When a quote payment status is successfully updated to "paid" in the database
+- **Where**: `lib/authorize-net-sync.js` → `syncAuthorizeNetTransaction()`
+- **Why**: Marks contacts whose quotes have been paid
+- **Trigger**: Authorize.net webhook `net.authorize.payment.authcapture.created` that matches a pending quote
+- **Note**: Only added if quote update is successful
+
+#### `authorize.net`
+- **When**: When any payment is successfully processed via Authorize.net
+- **Where**: `lib/authorize-net-sync.js` → `buildProductTags()`
+- **Why**: Identifies all contacts who have made payments through Authorize.net
+- **Always included**: Yes, for all payment webhooks
+
+#### `sold bookkeeping project`
+- **When**: When any payment is successfully processed via Authorize.net
+- **Where**: `lib/authorize-net-sync.js` → `buildProductTags()`
+- **Why**: Business-specific tag indicating a sale was made
+- **Always included**: Yes, for all payment webhooks
+
+---
+
+### 3. Product-Specific Tags (Dynamic)
+
+#### Product Name Tags (Slugified)
+- **Format**: Product names converted to lowercase, hyphenated tags
+- **Examples**: 
   - `catch-up-bookkeeping`
+  - `tax-return-llc`
+  - `tax-return-s-corp`
+  - `monthly-bookkeeping-subscription`
+- **When**: When a payment includes line items with product names
+- **Where**: `lib/authorize-net-sync.js` → `buildProductTags()` → `slugifyProductTag()`
+- **Why**: Tags contacts with the specific products/services they purchased
+- **How it works**:
+  1. Extracts product names from payment line items
+  2. Converts to lowercase
+  3. Replaces non-alphanumeric characters with hyphens
+  4. Removes leading/trailing hyphens
+- **Multiple tags**: One tag per product/service in the payment
 
 ---
 
-## Product Tag Format
+### 4. Subscription Tags
 
-### How Product Tags Are Created
-
-Product tags are created by slugifying the product name:
-
-1. **Convert to lowercase**: "Tax Return (S-Corp)" → "tax return (s-corp)"
-2. **Replace special characters with hyphens**: "tax return (s-corp)" → "tax-return--s-corp"
-3. **Remove multiple hyphens**: "tax-return--s-corp" → "tax-return-s-corp"
-4. **Remove leading/trailing hyphens**: "tax-return-s-corp" → "tax-return-s-corp"
-
-### Examples
-
-- **"Tax Return (S-Corp)"** → `tax-return-s-corp`
-- **"Tax Return (LLC)"** → `tax-return-llc`
-- **"Catch-up Bookkeeping"** → `catch-up-bookkeeping`
-- **"Monthly Bookkeeping Subscription"** → `monthly-bookkeeping-subscription`
-
-### Product Tag Rules
-
-- ✅ **No prefix** (removed `customer-product-` prefix)
-- ✅ **Slugified** (lowercase, hyphens, alphanumeric only)
-- ✅ **Multiple products** = Multiple tags (one per product)
-- ✅ **Product tags are applied for payment transactions**
+#### `subscription-created`
+- **When**: When a subscription is created in Authorize.net
+- **Where**: `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscription()`
+- **Why**: Identifies contacts who have active subscriptions
+- **Trigger**: Authorize.net webhook `net.authorize.customer.subscription.created`
+- **Note**: Requires subscription webhook events to be enabled in Authorize.net
 
 ---
 
-## Tag Summary
+## Tag Flow Summary
 
-### Always Applied Tags
+### Quote Creation Flow
 
-**For Payment Transactions:**
-- ✅ `authorize.net` (always)
-- ✅ `sold bookkeeping project` (always)
+**Build Link Path:**
+1. User clicks "Build Link" → Quote saved to database
+2. `api/quotes.js` → `syncLinkQuoteToGHL()`
+3. Tags added: `link-quote-created`, `quote-created`
 
-### Conditionally Applied Tags
+**Email Path:**
+1. User sends quote via email → Quote saved to database
+2. `api/send-quote-email.js` → `syncQuoteToGHL()`
+3. Tags added: `email-quote-sent`, `quote-created`
 
-**Product Tags:**
-- ✅ Applied if line items are present
-- ✅ One tag per product/service
-- ✅ Based on product name (slugified)
+### Payment Flow
 
----
+1. Customer pays via Authorize.net
+2. Webhook received: `net.authorize.payment.authcapture.created`
+3. `lib/authorize-net-sync.js` → `syncAuthorizeNetTransaction()`
+4. Tags added:
+   - `authorize.net` (always)
+   - `sold bookkeeping project` (always)
+   - Product name tags (one per product/service)
+   - `quote-paid` (if quote is found and updated to paid)
 
-## Complete Tag Examples
+### Subscription Flow
 
-### Example 1: Single Product Payment
-
-**Transaction:**
-- Product: "Tax Return (S-Corp)"
-- Amount: $2.01
-
-**Tags Applied:**
-```
-authorize.net
-sold bookkeeping project
-tax-return-s-corp
-```
-
----
-
-### Example 2: Multiple Products Payment
-
-**Transaction:**
-- Products: "Tax Return (S-Corp)", "Catch-up Bookkeeping"
-- Amount: $4.20
-
-**Tags Applied:**
-```
-authorize.net
-sold bookkeeping project
-tax-return-s-corp
-catch-up-bookkeeping
-```
+1. Subscription created in Authorize.net
+2. Webhook received: `net.authorize.customer.subscription.created`
+3. `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscription()`
+4. Tag added: `subscription-created`
 
 ---
 
-### Example 3: Subscription Payment
+## Tag Examples
 
-**Transaction:**
-- Product: "Monthly Bookkeeping Subscription"
-- Amount: $2.19
+### Example 1: Quote Created via Email
+- Tags: `email-quote-sent`, `quote-created`
 
-**Tags Applied:**
-```
-authorize.net
-sold bookkeeping project
-monthly-bookkeeping-subscription
-```
+### Example 2: Quote Created via Build Link
+- Tags: `link-quote-created`, `quote-created`
+
+### Example 3: Payment for "Catch-up Bookkeeping" ($2.19)
+- Tags: `authorize.net`, `sold bookkeeping project`, `catch-up-bookkeeping`, `quote-paid`
+
+### Example 4: Payment for Multiple Products
+- Tags: `authorize.net`, `sold bookkeeping project`, `catch-up-bookkeeping`, `tax-return-llc`, `quote-paid`
+
+### Example 5: Subscription Created
+- Tags: `subscription-created`
 
 ---
 
-## Tag Management
+## Code Locations
 
-### Tag Naming Conventions
-
-- **Static Tags**: Lowercase, hyphenated (e.g., `authorize.net`, `sold bookkeeping project`)
-- **Product Tags**: Lowercase, hyphenated, slugified product names (e.g., `tax-return-s-corp`)
-
-### Tag Limitations
-
-- **GHL Tag Limits**: Check GHL documentation for tag limits per contact
-- **Tag Length**: Tags should be reasonable length (GHL may have limits)
-- **Tag Uniqueness**: Tags are applied to contacts, not replaced (additive)
-
-### Tag Cleanup
-
-- **Duplicate Tags**: GHL handles duplicate tags automatically
-- **Tag Management**: Tags can be managed in GHL dashboard
-- **Tag Removal**: Tags are not automatically removed (manual removal required)
+| Tag | File | Function |
+|-----|------|----------|
+| `quote-created` | `api/quotes.js`, `api/send-quote-email.js` | `syncLinkQuoteToGHL()`, `syncQuoteToGHL()` |
+| `link-quote-created` | `api/quotes.js` | `syncLinkQuoteToGHL()` |
+| `email-quote-sent` | `api/send-quote-email.js` | `syncQuoteToGHL()` |
+| `quote-paid` | `lib/authorize-net-sync.js` | `syncAuthorizeNetTransaction()` |
+| `authorize.net` | `lib/authorize-net-sync.js` | `buildProductTags()` |
+| `sold bookkeeping project` | `lib/authorize-net-sync.js` | `buildProductTags()` |
+| Product name tags | `lib/authorize-net-sync.js` | `buildProductTags()` → `slugifyProductTag()` |
+| `subscription-created` | `lib/authorize-net-sync.js` | `syncAuthorizeNetSubscription()` |
 
 ---
 
 ## Notes
 
-1. **Tag Application**: Tags are applied additively (not replaced)
-2. **Tag Persistence**: Tags persist on contacts until manually removed
-3. **Tag Format**: All tags are lowercase, hyphenated, alphanumeric
-4. **Product Tags**: Product tags are based on product names (slugified)
-5. **Payment Webhooks**: Tags are applied when payment webhook (`net.authorize.payment.authcapture.created`) is received
-
----
-
-## Testing
-
-To verify tags are being applied correctly:
-
-1. **Check GHL Contact**: Search for contact by email
-2. **View Tags**: Check contact tags in GHL dashboard
-3. **Verify Tags**: Verify all expected tags are present
-4. **Check Notes**: Verify note contains payment transaction details
-
----
-
-## Troubleshooting
-
-### Tags Not Appearing
-
-1. **Check GHL API Credentials**: Verify `GHL_API_KEY` is set correctly
-2. **Check GHL Location ID**: Verify `GHL_LOCATION_ID` is set correctly
-3. **Check API Permissions**: Verify API key has tag permissions
-4. **Check Vercel Logs**: Look for GHL API errors in logs
-
-### Duplicate Tags
-
-- **Expected Behavior**: Tags are applied additively (duplicates are OK)
-- **GHL Behavior**: GHL handles duplicate tags automatically
-- **Manual Cleanup**: Duplicate tags can be removed manually in GHL
-
-### Missing Product Tags
-
-1. **Check Line Items**: Verify line items are present in webhook payload
-2. **Check Product Names**: Verify product names are present in line items
-3. **Check Tag Format**: Verify product names are being slugified correctly
-4. **Check GHL API Response**: Verify tags are being applied successfully
-
----
-
-## Resources
-
-- [GoHighLevel API Documentation](https://highlevel.stoplight.io/docs/integrations)
-- [Authorize.net Webhooks Documentation](https://developer.authorize.net/api/reference/features/webhooks.html)
-- [Tag Management in GHL](https://help.gohighlevel.com/support/solutions/articles/48001179628-tags)
+1. **Tag Formatting**: Product name tags are automatically slugified (lowercase, hyphenated, special characters removed)
+2. **Multiple Tags**: Contacts can have multiple tags simultaneously
+3. **Error Handling**: Tag addition failures are logged but don't fail the main operation
+4. **Webhook Requirements**: Subscription tags require subscription webhook events to be enabled in Authorize.net
+5. **Quote Matching**: `quote-paid` tag is only added if a matching pending quote is found by email address
+6. **Tag Duplication**: Adding tags that already exist on a contact will not trigger "Tag Added" automations in GHL. Use "Contact Updated" trigger instead if you need automations to run every time.

@@ -47,3 +47,9 @@ temp/
 # Supabase CLI
 .supabase
 
+# SSL Certificates (local development)
+localhost.pem
+localhost-key.pem
+*.pem
+*.key
+

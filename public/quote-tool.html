@@ -728,6 +728,45 @@
                 // Don't block the link generation if save fails
             }
             
+            // Send email to customer with quote and payment link
+            const customerEmail = quoteData.email;
+            if (customerEmail) {
+                try {
+                    const accessToken = localStorage.getItem('supabase_access_token');
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    
+                    // Add auth header if available, otherwise use bypass token
+                    if (accessToken) {
+                        headers['Authorization'] = `Bearer ${accessToken}`;
+                    } else {
+                        headers['x-vercel-protection-bypass'] = 'F9A72B1C8E5D4F0A6C3B7E2D9A8F5C1E';
+                    }
+                    
+                    const emailResponse = await fetch('/api/send-quote-email', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({
+                            recipientEmail: customerEmail,
+                            subject: 'Your Quote Request - Payment Link',
+                            message: 'Please use the link below to proceed with payment.',
+                            quoteData: quoteData
+                        })
+                    });
+                    
+                    if (emailResponse.ok) {
+                        console.log('Quote email sent to customer');
+                    } else {
+                        console.error('Failed to send email:', await emailResponse.json());
+                        // Don't block the redirect if email fails
+                    }
+                } catch (error) {
+                    console.error('Error sending email:', error);
+                    // Don't block the redirect if email fails
+                }
+            }
+            
             // Copy to clipboard and redirect
             navigator.clipboard.writeText(fullUrl).then(() => {
                 // Show success message

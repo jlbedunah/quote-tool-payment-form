@@ -90,13 +90,68 @@
 - Bulk quote generation
 - Quote approval workflows
 
-### **3. Integration Enhancements**
+### **4. Email Template Management**
+**Status**: Planned  
+**Priority**: Low  
+**Estimated Effort**: Low-Medium
+
+#### **Feature Description:**
+Extract the email template from the JavaScript code (`api/send-quote-email.js`) into a separate HTML template file for easier updates and maintenance.
+
+#### **Benefits:**
+- **Easier Updates**: Non-developers can update email templates without touching JavaScript code
+- **Better Organization**: Template separated from business logic
+- **Version Control**: Easier to track template changes separately
+- **Design Flexibility**: Can use HTML email design tools and paste into template file
+
+#### **Implementation Approach:**
+- Create `templates/quote-email.html` file with template structure
+- Use template variables/placeholders (e.g., `{{firstName}}`, `{{services}}`)
+- Update `generateEmailContent()` function to load and populate template
+- Support for template caching in production
+
+#### **Current State:**
+- Email template is currently embedded in `api/send-quote-email.js` (function `generateEmailContent()` starting at line 178)
+- Template includes: customer info, services table, totals, payment link, footer
+
+### **5. Double Payment Prevention**
+**Status**: Planned  
+**Priority**: Medium  
+**Estimated Effort**: Low-Medium (3.5-5.5 hours)
+
+#### **Feature Description:**
+Prevent customers from paying for an invoice/quote that has already been paid. If a customer clicks a payment link in an email but the quote is already paid, redirect them to the success confirmation page instead of showing the payment form.
+
+#### **Problem:**
+Currently, if a customer clicks a payment link again after already paying, they can attempt to pay a second time, potentially causing confusion and duplicate charges.
+
+#### **Solution:**
+- **Payment Form Check**: When `payment-form-robust.html` loads, check if the quote is already paid
+- **API Endpoint**: Create `/api/check-quote-status` to query database for paid quotes
+- **Auto-Redirect**: If paid, redirect to success page with "This invoice has already been paid" message
+- **Fail Open**: If check fails, allow payment form to show (better to allow legitimate payment than block)
+
+#### **Implementation Requirements:**
+1. Create API endpoint `/api/check-quote-status.js` (query Supabase for paid quotes by email)
+2. Update `payment-form-robust.html` with `checkQuoteStatus()` function on page load
+3. Update `payment-success.html` to handle "already paid" message
+4. Match quotes by email (and optionally amount) to find most recent paid quote
+
+#### **Technical Details:**
+- Database query: Match by `customer_email` (case-insensitive) where `payment_status = 'paid'`
+- Edge cases: Multiple quotes per email, API errors (fail open), timing with webhooks
+- Performance: Simple indexed query, should be fast (< 100ms)
+
+#### **Reference:**
+See `DOUBLE_PAYMENT_PREVENTION_FEATURE.md` for complete specification.
+
+### **6. Integration Enhancements**
 - Hyros advanced tracking
 - CRM integrations (Salesforce, HubSpot)
 - Accounting software integration
 - Email marketing automation
 
-### **4. Mobile Optimization**
+### **7. Mobile Optimization**
 - Mobile-first admin interface
 - Progressive Web App (PWA) features
 - Offline capability
