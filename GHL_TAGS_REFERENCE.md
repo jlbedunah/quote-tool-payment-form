@@ -77,9 +77,29 @@ This document lists all tags that are automatically added to GoHighLevel contact
 #### `subscription-created`
 - **When**: When a subscription is created in Authorize.net
 - **Where**: `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscription()`
-- **Why**: Identifies contacts who have active subscriptions
+- **Why**: Generic tag identifying all contacts with active subscriptions
 - **Trigger**: Authorize.net webhook `net.authorize.customer.subscription.created`
 - **Note**: Requires subscription webhook events to be enabled in Authorize.net
+- **Always paired with**: Product-specific interval tag (see below)
+
+#### Interval-Based Subscription Tags (Product-Specific)
+- **Format**: `{interval}-bookkeeping-subscription`
+- **Examples**: 
+  - `monthly-bookkeeping-subscription`
+  - `quarterly-bookkeeping-subscription`
+  - `weekly-bookkeeping-subscription`
+  - `biweekly-bookkeeping-subscription`
+  - `annual-bookkeeping-subscription`
+- **When**: When a subscription is created, based on billing interval
+- **Where**: `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscription()` → `getSubscriptionTagsByInterval()`
+- **Why**: Identifies the specific type of subscription (monthly, quarterly, etc.)
+- **How it works**:
+  1. Extracts `interval` or `billingInterval` from subscription webhook
+  2. Maps interval to product-specific tag
+  3. Adds tag along with `subscription-created`
+- **Matching Logic**: Based on interval only (not amount), since amounts can vary
+- **Assumption**: Only ONE subscription product per interval (e.g., only one monthly subscription)
+- **Paired with**: `subscription-created`
 
 ---
 
@@ -113,7 +133,10 @@ This document lists all tags that are automatically added to GoHighLevel contact
 1. Subscription created in Authorize.net
 2. Webhook received: `net.authorize.customer.subscription.created`
 3. `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscription()`
-4. Tag added: `subscription-created`
+4. Extracts billing interval from webhook
+5. Tags added:
+   - `subscription-created` (always)
+   - Product-specific tag based on interval (e.g., `monthly-bookkeeping-subscription`)
 
 ---
 
@@ -131,8 +154,11 @@ This document lists all tags that are automatically added to GoHighLevel contact
 ### Example 4: Payment for Multiple Products
 - Tags: `authorize.net`, `sold bookkeeping project`, `catch-up-bookkeeping`, `tax-return-llc`, `quote-paid`
 
-### Example 5: Subscription Created
-- Tags: `subscription-created`
+### Example 5: Monthly Subscription Created
+- Tags: `subscription-created`, `monthly-bookkeeping-subscription`
+
+### Example 6: Quarterly Subscription Created
+- Tags: `subscription-created`, `quarterly-bookkeeping-subscription`
 
 ---
 
@@ -148,6 +174,7 @@ This document lists all tags that are automatically added to GoHighLevel contact
 | `sold bookkeeping project` | `lib/authorize-net-sync.js` | `buildProductTags()` |
 | Product name tags | `lib/authorize-net-sync.js` | `buildProductTags()` → `slugifyProductTag()` |
 | `subscription-created` | `lib/authorize-net-sync.js` | `syncAuthorizeNetSubscription()` |
+| Interval-based subscription tags | `lib/authorize-net-sync.js` | `getSubscriptionTagsByInterval()` → `syncAuthorizeNetSubscription()` |
 
 ---
 
@@ -159,3 +186,4 @@ This document lists all tags that are automatically added to GoHighLevel contact
 4. **Webhook Requirements**: Subscription tags require subscription webhook events to be enabled in Authorize.net
 5. **Quote Matching**: `quote-paid` tag is only added if a matching pending quote is found by email address
 6. **Tag Duplication**: Adding tags that already exist on a contact will not trigger "Tag Added" automations in GHL. Use "Contact Updated" trigger instead if you need automations to run every time.
+7. **Subscription Tagging**: Subscription tags are based on billing interval only (not amount), since amounts can vary. Assumes only ONE subscription product per interval.
