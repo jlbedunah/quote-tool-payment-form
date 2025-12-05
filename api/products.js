@@ -1,3 +1,4 @@
+import { supabase, isSupabaseConfigured } from '../lib/supabase.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,48 +8,74 @@ const __dirname = path.dirname(__filename);
 
 const PRODUCTS_FILE = path.join(__dirname, '../data/products.json');
 
-// Helper function to read products
-function readProducts() {
+// Helper function to convert database row (snake_case) to API format (camelCase)
+function dbRowToProduct(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    unitPrice: parseFloat(row.unit_price),
+    category: row.category,
+    isSubscription: row.is_subscription,
+    subscriptionInterval: row.subscription_interval,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+// Helper function to convert API format (camelCase) to database row (snake_case)
+function productToDbRow(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description || null,
+    unit_price: product.unitPrice,
+    category: product.category || null,
+    is_subscription: product.isSubscription,
+    subscription_interval: product.subscriptionInterval || null,
+    is_active: product.isActive !== false
+  };
+}
+
+// Helper function to read products from Supabase or fallback to file
+async function readProducts() {
+  // Try Supabase first if configured
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error reading products from Supabase:', error);
+        // Fall back to file if Supabase fails
+        return readProductsFromFile();
+      }
+
+      return {
+        products: data.map(dbRowToProduct)
+      };
+    } catch (error) {
+      console.error('Error reading products from Supabase:', error);
+      // Fall back to file if Supabase fails
+      return readProductsFromFile();
+    }
+  }
+
+  // Fall back to file-based storage
+  return readProductsFromFile();
+}
+
+// Helper function to read products from file (fallback)
+function readProductsFromFile() {
   try {
     const data = fs.readFileSync(PRODUCTS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading products file:', error);
     return { products: [] };
-  }
-}
-
-// Helper function to write products
-// NOTE: On Vercel, the filesystem is read-only, so writes won't persist in production
-// For production, you need to use a database (Vercel KV, Supabase, MongoDB, etc.)
-// This function will work in local development but not on Vercel
-function writeProducts(data) {
-  try {
-    // In Vercel, we can't write to files - return false
-    // In local dev, try to write to the file
-    if (process.env.VERCEL === '1') {
-      console.warn('⚠️ File writes not supported in Vercel production. Product writes will not persist.');
-      console.warn('💡 To enable product management in production, integrate a database:');
-      console.warn('   - Vercel KV (Redis)');
-      console.warn('   - Supabase (PostgreSQL)');
-      console.warn('   - MongoDB Atlas');
-      console.warn('   - Or another database service');
-      // Return success for now so the API doesn't error, but warn that it won't persist
-      // In production, the file will need to be updated via git commits
-      return false;
-    }
-
-    // Local development - try to write to file
-    try {
-      fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(data, null, 2), 'utf8');
-      return true;
-    } catch (writeError) {
-      console.error('Error writing products file:', writeError);
-      return false;
-    }
-  } catch (error) {
-    console.error('Error in writeProducts:', error);
-    return false;
   }
 }
 
@@ -117,7 +144,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { products } = readProducts();
+    const { products } = await readProducts();
 
     // GET - List products
     if (req.method === 'GET') {
@@ -165,20 +192,51 @@ export default async function handler(req, res) {
       newProduct.createdAt = now;
       newProduct.updatedAt = now;
 
-      // Add to products array
-      products.push(newProduct);
+      // Save to Supabase or file
+      if (isSupabaseConfigured()) {
+        try {
+          const dbRow = productToDbRow(newProduct);
+          const { data, error } = await supabase
+            .from('products')
+            .insert([dbRow])
+            .select()
+            .single();
 
-      // Write to file
-      if (writeProducts({ products })) {
-        return res.status(201).json({
-          success: true,
-          product: newProduct
-        });
+          if (error) {
+            console.error('Error creating product in Supabase:', error);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to save product: ' + error.message
+            });
+          }
+
+          return res.status(201).json({
+            success: true,
+            product: dbRowToProduct(data)
+          });
+        } catch (error) {
+          console.error('Error creating product:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to save product: ' + error.message
+          });
+        }
       } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to save product'
-        });
+        // Fallback to file-based storage
+        products.push(newProduct);
+        try {
+          fs.writeFileSync(PRODUCTS_FILE, JSON.stringify({ products }, null, 2), 'utf8');
+          return res.status(201).json({
+            success: true,
+            product: newProduct
+          });
+        } catch (error) {
+          console.error('Error writing products file:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to save product'
+          });
+        }
       }
     }
 
@@ -195,15 +253,13 @@ export default async function handler(req, res) {
         });
       }
 
-      const productIndex = products.findIndex(p => p.id === id);
-      if (productIndex === -1) {
+      const existingProduct = products.find(p => p.id === id);
+      if (!existingProduct) {
         return res.status(404).json({
           success: false,
           error: 'Product not found'
         });
       }
-
-      const existingProduct = products[productIndex];
       
       // Merge updates with existing product
       const mergedProduct = {
@@ -223,20 +279,56 @@ export default async function handler(req, res) {
         });
       }
 
-      // Update product
-      products[productIndex] = mergedProduct;
+      // Update in Supabase or file
+      if (isSupabaseConfigured()) {
+        try {
+          const dbRow = productToDbRow(mergedProduct);
+          // Remove id, created_at from update (they shouldn't change)
+          const { id: _, created_at: __, ...updateData } = dbRow;
+          
+          const { data, error } = await supabase
+            .from('products')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
 
-      // Write to file
-      if (writeProducts({ products })) {
-        return res.status(200).json({
-          success: true,
-          product: mergedProduct
-        });
+          if (error) {
+            console.error('Error updating product in Supabase:', error);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to update product: ' + error.message
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            product: dbRowToProduct(data)
+          });
+        } catch (error) {
+          console.error('Error updating product:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to update product: ' + error.message
+          });
+        }
       } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to update product'
-        });
+        // Fallback to file-based storage
+        const productIndex = products.findIndex(p => p.id === id);
+        products[productIndex] = mergedProduct;
+        try {
+          fs.writeFileSync(PRODUCTS_FILE, JSON.stringify({ products }, null, 2), 'utf8');
+          return res.status(200).json({
+            success: true,
+            product: mergedProduct
+          });
+        } catch (error) {
+          console.error('Error writing products file:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to update product'
+          });
+        }
       }
     }
 
@@ -252,8 +344,8 @@ export default async function handler(req, res) {
         });
       }
 
-      const productIndex = products.findIndex(p => p.id === id);
-      if (productIndex === -1) {
+      const existingProduct = products.find(p => p.id === id);
+      if (!existingProduct) {
         return res.status(404).json({
           success: false,
           error: 'Product not found'
@@ -261,20 +353,52 @@ export default async function handler(req, res) {
       }
 
       // Soft delete - set isActive to false
-      products[productIndex].isActive = false;
-      products[productIndex].updatedAt = new Date().toISOString();
+      if (isSupabaseConfigured()) {
+        try {
+          const { data, error } = await supabase
+            .from('products')
+            .update({ is_active: false })
+            .eq('id', id)
+            .select()
+            .single();
 
-      // Write to file
-      if (writeProducts({ products })) {
-        return res.status(200).json({
-          success: true,
-          message: 'Product deactivated successfully'
-        });
+          if (error) {
+            console.error('Error deactivating product in Supabase:', error);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to delete product: ' + error.message
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            message: 'Product deactivated successfully'
+          });
+        } catch (error) {
+          console.error('Error deactivating product:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to delete product: ' + error.message
+          });
+        }
       } else {
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to delete product'
-        });
+        // Fallback to file-based storage
+        const productIndex = products.findIndex(p => p.id === id);
+        products[productIndex].isActive = false;
+        products[productIndex].updatedAt = new Date().toISOString();
+        try {
+          fs.writeFileSync(PRODUCTS_FILE, JSON.stringify({ products }, null, 2), 'utf8');
+          return res.status(200).json({
+            success: true,
+            message: 'Product deactivated successfully'
+          });
+        } catch (error) {
+          console.error('Error writing products file:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to delete product'
+          });
+        }
       }
     }
 
