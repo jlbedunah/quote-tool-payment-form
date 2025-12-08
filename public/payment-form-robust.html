@@ -647,7 +647,7 @@
                 messageContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
-            function showSuccess(result, formPayload) {
+            async function showSuccess(result, formPayload) {
                 console.log('Payment successful, redirecting to success page:', result);
 
                 try {
@@ -666,6 +666,64 @@
                     sessionStorage.setItem('paymentResult', JSON.stringify(storedPayload));
                 } catch (storageError) {
                     console.warn('Unable to store payment result in sessionStorage:', storageError);
+                }
+                
+                // In development/local mode, trigger direct sync (webhooks won't reach localhost)
+                const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (isLocalDev && result.transactionId) {
+                    try {
+                        console.log('Local dev detected - triggering direct payment sync...');
+                        
+                        // Get customer info from form
+                        const email = document.getElementById('email')?.value || formPayload?.email || '';
+                        const firstName = document.getElementById('firstName')?.value || formPayload?.firstName || '';
+                        const lastName = document.getElementById('lastName')?.value || formPayload?.lastName || '';
+                        const amount = result.amount || formPayload?.oneTimeAmount || document.getElementById('amount')?.value || null;
+                        const invoiceNumber = result.invoiceNumber || null;
+                        
+                        // Get line items
+                        const lineItemsContainer = document.getElementById('lineItemsContainer');
+                        let lineItems = [];
+                        if (lineItemsContainer && lineItemsContainer.textContent) {
+                            try {
+                                lineItems = JSON.parse(lineItemsContainer.textContent);
+                            } catch (e) {
+                                console.warn('Could not parse line items:', e);
+                            }
+                        }
+                        
+                        // Call direct sync endpoint (non-blocking - don't wait for it)
+                        fetch('/api/sync-payment-direct', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                transactionId: result.transactionId,
+                                email: email,
+                                amount: amount,
+                                invoiceNumber: invoiceNumber,
+                                firstName: firstName,
+                                lastName: lastName,
+                                lineItems: lineItems
+                            })
+                        }).then(response => response.json())
+                          .then(syncResult => {
+                              console.log('Direct payment sync result:', syncResult);
+                              if (syncResult.success) {
+                                  console.log('✅ Payment synced to GHL successfully (dev mode)');
+                              } else {
+                                  console.warn('⚠️ Direct sync skipped or failed:', syncResult.reason || syncResult.error);
+                              }
+                          })
+                          .catch(error => {
+                              console.error('Error calling direct sync endpoint:', error);
+                              // Don't block redirect on sync error
+                          });
+                    } catch (syncError) {
+                        console.error('Error triggering direct sync:', syncError);
+                        // Don't block redirect on sync error
+                    }
                 }
                 
                 // Build success page URL with transaction details
