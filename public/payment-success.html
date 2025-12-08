@@ -68,8 +68,8 @@
                             </div>
                         </div>
                     </div>
-                    <h1 class="text-3xl font-bold mb-2">Payment Successful!</h1>
-                    <p class="text-lg opacity-90">Thank you for your business</p>
+                    <h1 id="pageTitle" class="text-3xl font-bold mb-2">Payment Successful!</h1>
+                    <p id="pageSubtitle" class="text-lg opacity-90">Thank you for your business</p>
                 </div>
             </div>
         </div>
@@ -84,7 +84,7 @@
                     </svg>
                 </div>
 
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Payment Confirmed</h2>
+                <h2 id="confirmationTitle" class="text-2xl font-bold text-gray-800 mb-4">Payment Confirmed</h2>
                 
                 <!-- Transaction Details -->
                 <div id="transactionDetails" class="bg-gray-50 rounded-lg p-6 mb-6 text-left">
@@ -183,6 +183,71 @@
     </div>
 
     <script>
+        // Check if this is an "already paid" message
+        function checkAlreadyPaidMessage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const message = urlParams.get('message');
+            
+            if (message === 'This invoice has already been paid') {
+                // Update page title and subtitle
+                const pageTitle = document.getElementById('pageTitle');
+                const pageSubtitle = document.getElementById('pageSubtitle');
+                const confirmationTitle = document.getElementById('confirmationTitle');
+                
+                if (pageTitle) {
+                    pageTitle.textContent = 'Invoice Already Paid';
+                }
+                if (pageSubtitle) {
+                    pageSubtitle.textContent = 'This invoice has already been processed';
+                }
+                if (confirmationTitle) {
+                    confirmationTitle.textContent = 'Payment Already Processed';
+                }
+                
+                // Update the success icon to be informational instead of success
+                const successIcon = document.querySelector('.bg-green-100');
+                if (successIcon) {
+                    successIcon.className = 'w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6';
+                    const svg = successIcon.querySelector('svg');
+                    if (svg) {
+                        svg.className = 'w-10 h-10 text-blue-600';
+                    }
+                }
+                
+                // Update "What's Next?" section
+                const nextSteps = document.querySelector('.bg-yellow-50');
+                if (nextSteps) {
+                    const title = nextSteps.querySelector('h3');
+                    if (title) {
+                        title.textContent = 'Payment Information';
+                    }
+                    const list = nextSteps.querySelector('ul');
+                    if (list) {
+                        list.innerHTML = `
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                This invoice has already been successfully processed.
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                You will not be charged again for this invoice.
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                If you have any questions, please contact us.
+                            </li>
+                        `;
+                    }
+                }
+            }
+        }
+
         function getUrlParameter(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
@@ -422,6 +487,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Check for "already paid" message first
+            checkAlreadyPaidMessage();
             const storedResult = getStoredPaymentResult();
             populateTransactionDetails(storedResult);
             trackPurchaseEvent(storedResult);

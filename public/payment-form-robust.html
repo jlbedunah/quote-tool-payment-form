@@ -347,7 +347,66 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        // Check if quote is already paid before showing payment form
+        async function checkQuoteStatus() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const email = urlParams.get('email');
+            const amount = urlParams.get('oneTimeTotal') || urlParams.get('grandTotal');
+            
+            if (!email) {
+                // No email in URL, proceed normally (might be direct access)
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/check-quote-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        amount: amount
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.isPaid) {
+                    // Quote is already paid, redirect to success page
+                    const successParams = new URLSearchParams();
+                    successParams.append('message', 'This invoice has already been paid');
+                    if (result.transactionId) {
+                        successParams.append('transactionId', result.transactionId);
+                    }
+                    if (result.amount) {
+                        successParams.append('amount', result.amount);
+                    } else if (amount) {
+                        successParams.append('amount', amount);
+                    }
+                    if (email) {
+                        successParams.append('email', email);
+                    }
+                    if (result.quoteNumber) {
+                        successParams.append('quoteNumber', result.quoteNumber);
+                    }
+                    
+                    window.location.href = `/payment-success.html?${successParams.toString()}`;
+                    return;
+                }
+                
+                // Quote not paid, continue with normal payment form
+            } catch (error) {
+                console.error('Error checking quote status:', error);
+                // On error, proceed with payment form (fail open)
+                // Better to allow payment attempt than block legitimate payments
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check quote status first, before populating form
+            await checkQuoteStatus();
+            
             const urlParams = new URLSearchParams(window.location.search);
             populateQuoteSummary(urlParams);
             populateCustomerInfo(urlParams);
