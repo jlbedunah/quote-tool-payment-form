@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Application Logs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fef2f2',
+                            500: '#CA1824',
+                            600: '#B0151F',
+                            700: '#96121A',
+                        },
+                        brand: '#CA1824'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Navigation Menu -->
+    <script type="module" src="/lib/navigation-menu.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md mb-6 p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Application Logs</h1>
+                    <p class="text-gray-600 mt-1">View and search application logs</p>
+                </div>
+                <button onclick="exportLogs()" 
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div id="statsDashboard" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div class="text-sm text-gray-600">Last 24 Hours</div>
+                <div class="text-2xl font-bold text-gray-800" id="stat24h">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div class="text-sm text-gray-600">Last 7 Days</div>
+                <div class="text-2xl font-bold text-gray-800" id="stat7d">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div class="text-sm text-gray-600">Last 30 Days</div>
+                <div class="text-2xl font-bold text-gray-800" id="stat30d">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
+                <div class="text-sm text-gray-600">Errors (24h)</div>
+                <div class="text-2xl font-bold text-red-600" id="statErrors">-</div>
+            </div>
+        </div>
+
+        <!-- Search & Filter Panel -->
+        <div class="bg-white rounded-lg shadow-md mb-6 p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Search & Filters</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Date Range -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="datetime-local" id="startDate" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="datetime-local" id="endDate" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Log Level -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Log Level</label>
+                    <select id="logLevel" multiple
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        <option value="debug">Debug</option>
+                        <option value="info">Info</option>
+                        <option value="warn">Warn</option>
+                        <option value="error" selected>Error</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                </div>
+                
+                <!-- Source -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                    <input type="text" id="source" placeholder="e.g., lib/authorize-net-sync.js"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" placeholder="customer@example.com"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Transaction ID -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Transaction ID</label>
+                    <input type="text" id="transactionId" placeholder="abc123"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Contact ID -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Contact ID</label>
+                    <input type="text" id="contactId" placeholder="contact_xyz"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Quote ID -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quote ID</label>
+                    <input type="text" id="quoteId" placeholder="quote_123"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Message Search -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Message Search</label>
+                    <input type="text" id="messageSearch" placeholder="Search in messages..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                
+                <!-- Environment -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Environment</label>
+                    <select id="environment"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        <option value="all">All</option>
+                        <option value="production">Production</option>
+                        <option value="preview">Preview</option>
+                        <option value="development">Development</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex gap-4 mt-6">
+                <button onclick="searchLogs()" 
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium">
+                    Search
+                </button>
+                <button onclick="clearFilters()" 
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors duration-200 font-medium">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Function</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                Click "Search" to load logs...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div id="pagination" class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200 hidden">
+                <div class="text-sm text-gray-700">
+                    Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="showingTotal">0</span> logs
+                </div>
+                <div class="flex gap-2">
+                    <button id="prevPage" onclick="changePage(-1)" 
+                            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Previous
+                    </button>
+                    <span class="px-4 py-2 text-gray-700">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    </span>
+                    <button id="nextPage" onclick="changePage(1)" 
+                            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Log Details</h2>
+                    <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="detailContent" class="space-y-4">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentFilters = {};
+
+        // Load stats on page load
+        async function loadStats() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/logs-stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load stats');
+                }
+                
+                const stats = await response.json();
+                document.getElementById('stat24h').textContent = stats.total24h.toLocaleString();
+                document.getElementById('stat7d').textContent = stats.total7d.toLocaleString();
+                document.getElementById('stat30d').textContent = stats.total30d.toLocaleString();
+                document.getElementById('statErrors').textContent = stats.errors24h.toLocaleString();
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Search logs
+        async function searchLogs(page = 1) {
+            currentPage = page;
+            
+            // Build query params
+            const params = new URLSearchParams();
+            
+            if (document.getElementById('startDate').value) {
+                params.append('startDate', new Date(document.getElementById('startDate').value).toISOString());
+            }
+            if (document.getElementById('endDate').value) {
+                params.append('endDate', new Date(document.getElementById('endDate').value).toISOString());
+            }
+            
+            const levels = Array.from(document.getElementById('logLevel').selectedOptions).map(opt => opt.value);
+            if (levels.length > 0) {
+                levels.forEach(level => params.append('level', level));
+            }
+            
+            if (document.getElementById('source').value) {
+                params.append('source', document.getElementById('source').value);
+            }
+            if (document.getElementById('email').value) {
+                params.append('email', document.getElementById('email').value);
+            }
+            if (document.getElementById('transactionId').value) {
+                params.append('transactionId', document.getElementById('transactionId').value);
+            }
+            if (document.getElementById('contactId').value) {
+                params.append('contactId', document.getElementById('contactId').value);
+            }
+            if (document.getElementById('quoteId').value) {
+                params.append('quoteId', document.getElementById('quoteId').value);
+            }
+            if (document.getElementById('messageSearch').value) {
+                params.append('search', document.getElementById('messageSearch').value);
+            }
+            if (document.getElementById('environment').value !== 'all') {
+                params.append('environment', document.getElementById('environment').value);
+            }
+            
+            params.append('page', page);
+            params.append('limit', '50');
+            
+            currentFilters = Object.fromEntries(params);
+            
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/logs?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load logs');
+                }
+                
+                const data = await response.json();
+                displayLogs(data.logs);
+                updatePagination(data);
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                document.getElementById('logsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-4 text-center text-red-500">
+                            Error loading logs: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Display logs in table
+        function displayLogs(logs) {
+            const tbody = document.getElementById('logsTableBody');
+            
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                            No logs found matching your criteria.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = logs.map(log => {
+                const timestamp = new Date(log.created_at).toLocaleString();
+                const levelBadge = getLevelBadge(log.level);
+                const sourceShort = log.source.length > 40 ? log.source.substring(0, 40) + '...' : log.source;
+                const messageShort = log.message.length > 100 ? log.message.substring(0, 100) + '...' : log.message;
+                const email = log.metadata?.email || '-';
+                const transactionId = log.metadata?.transactionId || '-';
+                const rowClass = log.level === 'error' ? 'bg-red-50' : '';
+                
+                return `
+                    <tr class="${rowClass}">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${timestamp}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${levelBadge}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900" title="${log.source}">${sourceShort}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${log.function_name || '-'}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900" title="${log.message}">${messageShort}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${email}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${transactionId}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="showLogDetail('${log.id}')" 
+                                    class="text-red-600 hover:text-red-900">View Details</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Get level badge HTML
+        function getLevelBadge(level) {
+            const badges = {
+                'debug': '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-800">Debug</span>',
+                'info': '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-200 text-blue-800">Info</span>',
+                'warn': '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-200 text-yellow-800">Warn</span>',
+                'error': '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-200 text-red-800">Error</span>'
+            };
+            return badges[level] || badges['info'];
+        }
+
+        // Update pagination
+        function updatePagination(data) {
+            totalPages = data.totalPages || 1;
+            currentPage = data.page || 1;
+            
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+            document.getElementById('showingFrom').textContent = ((currentPage - 1) * 50 + 1).toLocaleString();
+            document.getElementById('showingTo').textContent = Math.min(currentPage * 50, data.total).toLocaleString();
+            document.getElementById('showingTotal').textContent = data.total.toLocaleString();
+            
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage >= totalPages;
+            
+            document.getElementById('pagination').classList.remove('hidden');
+        }
+
+        // Change page
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                searchLogs(newPage);
+            }
+        }
+
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('logLevel').selectedIndex = 3; // Select "error"
+            document.getElementById('source').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('transactionId').value = '';
+            document.getElementById('contactId').value = '';
+            document.getElementById('quoteId').value = '';
+            document.getElementById('messageSearch').value = '';
+            document.getElementById('environment').value = 'all';
+            currentPage = 1;
+            searchLogs(1);
+        }
+
+        // Show log detail - find in current results or fetch
+        async function showLogDetail(logId) {
+            // First try to find in current table
+            const currentLogs = Array.from(document.querySelectorAll('#logsTableBody tr')).map(row => {
+                const button = row.querySelector('button[onclick*="showLogDetail"]');
+                if (button) {
+                    const onclick = button.getAttribute('onclick');
+                    const match = onclick.match(/showLogDetail\('([^']+)'\)/);
+                    if (match && match[1] === logId) {
+                        // Extract data from row
+                        const cells = row.querySelectorAll('td');
+                        return {
+                            id: logId,
+                            created_at: cells[0].textContent.trim(),
+                            level: cells[1].querySelector('span').textContent.toLowerCase(),
+                            source: cells[2].getAttribute('title') || cells[2].textContent.trim(),
+                            function_name: cells[3].textContent.trim() !== '-' ? cells[3].textContent.trim() : null,
+                            message: cells[4].getAttribute('title') || cells[4].textContent.trim(),
+                            metadata: {
+                                email: cells[5].textContent.trim() !== '-' ? cells[5].textContent.trim() : null,
+                                transactionId: cells[6].textContent.trim() !== '-' ? cells[6].textContent.trim() : null
+                            }
+                        };
+                    }
+                }
+                return null;
+            }).filter(Boolean);
+            
+            const log = currentLogs.find(l => l.id === logId);
+            
+            if (log) {
+                displayLogDetail(log);
+                return;
+            }
+            
+            // If not found, fetch from API
+            try {
+                const token = localStorage.getItem('auth_token');
+                // Search for this specific log by including it in a broader search
+                const response = await fetch(`/api/logs?limit=1000`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load log details');
+                }
+                
+                const data = await response.json();
+                const foundLog = data.logs.find(l => l.id === logId);
+                
+                if (foundLog) {
+                    displayLogDetail(foundLog);
+                } else {
+                    alert('Log not found. It may have been deleted or is outside the current search results.');
+                }
+            } catch (error) {
+                console.error('Error loading log detail:', error);
+                alert('Error loading log details: ' + error.message);
+            }
+        }
+
+        // Display log detail in modal
+        function displayLogDetail(log) {
+            const content = document.getElementById('detailContent');
+            
+            const timestamp = new Date(log.created_at).toLocaleString();
+            const metadata = log.metadata || {};
+            const errorDetails = log.error_details || {};
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Basic Information</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg space-y-2">
+                            <div><span class="font-medium">Timestamp:</span> ${timestamp}</div>
+                            <div><span class="font-medium">Level:</span> ${getLevelBadge(log.level)}</div>
+                            <div><span class="font-medium">Source:</span> ${log.source}</div>
+                            ${log.function_name ? `<div><span class="font-medium">Function:</span> ${log.function_name}</div>` : ''}
+                            <div><span class="font-medium">Environment:</span> ${log.environment}</div>
+                            ${log.deployment_url ? `<div><span class="font-medium">Deployment:</span> <a href="${log.deployment_url}" target="_blank" class="text-blue-600">${log.deployment_url}</a></div>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Message</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre class="whitespace-pre-wrap text-sm">${log.message}</pre>
+                        </div>
+                    </div>
+                    
+                    ${Object.keys(metadata).length > 0 ? `
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Metadata</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre class="whitespace-pre-wrap text-sm">${JSON.stringify(metadata, null, 2)}</pre>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${Object.keys(errorDetails).length > 0 ? `
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-800 mb-2">Error Details</h3>
+                        <div class="bg-red-50 p-4 rounded-lg space-y-2">
+                            ${errorDetails.name ? `<div><span class="font-medium">Error Type:</span> ${errorDetails.name}</div>` : ''}
+                            ${errorDetails.message ? `<div><span class="font-medium">Error Message:</span> ${errorDetails.message}</div>` : ''}
+                            ${errorDetails.status ? `<div><span class="font-medium">HTTP Status:</span> ${errorDetails.status} ${errorDetails.statusText || ''}</div>` : ''}
+                            ${errorDetails.url ? `<div><span class="font-medium">URL:</span> ${errorDetails.url}</div>` : ''}
+                            ${errorDetails.code ? `<div><span class="font-medium">Code:</span> ${errorDetails.code}</div>` : ''}
+                            ${errorDetails.stack ? `
+                            <div>
+                                <span class="font-medium">Stack Trace:</span>
+                                <pre class="mt-2 whitespace-pre-wrap text-xs bg-white p-2 rounded border">${errorDetails.stack}</pre>
+                            </div>
+                            ` : ''}
+                            ${errorDetails.responseBody ? `
+                            <div>
+                                <span class="font-medium">Response Body:</span>
+                                <pre class="mt-2 whitespace-pre-wrap text-xs bg-white p-2 rounded border">${errorDetails.responseBody}</pre>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Raw JSON</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre class="whitespace-pre-wrap text-xs overflow-x-auto">${JSON.stringify(log, null, 2)}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        // Close detail modal
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        // Export logs
+        async function exportLogs() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const params = new URLSearchParams(currentFilters);
+                params.delete('page');
+                params.delete('limit');
+                params.append('limit', '10000'); // Get more for export
+                
+                const response = await fetch(`/api/logs?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to export logs');
+                }
+                
+                const data = await response.json();
+                
+                // Convert to CSV
+                const csv = convertToCSV(data.logs);
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `logs-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error exporting logs:', error);
+                alert('Error exporting logs: ' + error.message);
+            }
+        }
+
+        // Convert logs to CSV
+        function convertToCSV(logs) {
+            const headers = ['Timestamp', 'Level', 'Source', 'Function', 'Message', 'Email', 'Transaction ID', 'Contact ID', 'Quote ID', 'Environment'];
+            const rows = logs.map(log => [
+                new Date(log.created_at).toISOString(),
+                log.level,
+                log.source,
+                log.function_name || '',
+                `"${log.message.replace(/"/g, '""')}"`,
+                log.metadata?.email || '',
+                log.metadata?.transactionId || '',
+                log.metadata?.contactId || '',
+                log.metadata?.quoteId || '',
+                log.environment
+            ]);
+            
+            return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+        }
+
+        // Load stats on page load
+        loadStats();
+    </script>
+</body>
+</html>
+

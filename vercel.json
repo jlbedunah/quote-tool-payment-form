@@ -17,6 +17,10 @@
     {
       "source": "/payment-success",
       "destination": "/payment-success.html"
+    },
+    {
+      "source": "/admin-logs",
+      "destination": "/admin-logs.html"
     }
   ]
 }
