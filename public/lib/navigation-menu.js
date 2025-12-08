@@ -68,6 +68,10 @@ export function initNavigationMenu(user) {
              class="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors duration-200 font-medium ${window.location.pathname.includes('admin-users') ? 'bg-red-50 text-red-600' : ''}">
             User Management
           </a>
+          <a href="/admin-logs.html" 
+             class="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors duration-200 font-medium ${window.location.pathname.includes('admin-logs') ? 'bg-red-50 text-red-600' : ''}">
+            Logs
+          </a>
           ` : ''}
           
           <!-- User Info & Logout -->

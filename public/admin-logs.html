@@ -229,15 +229,42 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        // Initialize navigation with authentication
+        // This will redirect to login if not authenticated
+        import { initNavigationWithAuth } from '/lib/navigation-menu.js';
+        
+        let currentUser = null;
         let currentPage = 1;
         let totalPages = 1;
         let currentFilters = {};
 
+        // Initialize page
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                currentUser = await initNavigationWithAuth();
+                
+                // Check if user is admin (admin pages require admin access)
+                if (!currentUser || !currentUser.is_admin) {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '/quote-tool.html';
+                    return;
+                }
+            } catch (error) {
+                console.error('Error initializing navigation:', error);
+                // If navigation fails, redirect to login
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Load stats after authentication is confirmed
+            loadStats();
+        });
+
         // Load stats on page load
         async function loadStats() {
             try {
-                const token = localStorage.getItem('auth_token');
+                const token = localStorage.getItem('supabase_access_token');
                 const response = await fetch('/api/logs-stats', {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -305,7 +332,7 @@
             currentFilters = Object.fromEntries(params);
             
             try {
-                const token = localStorage.getItem('auth_token');
+                const token = localStorage.getItem('supabase_access_token');
                 const response = await fetch(`/api/logs?${params.toString()}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -462,7 +489,7 @@
             
             // If not found, fetch from API
             try {
-                const token = localStorage.getItem('auth_token');
+                const token = localStorage.getItem('supabase_access_token');
                 // Search for this specific log by including it in a broader search
                 const response = await fetch(`/api/logs?limit=1000`, {
                     headers: {
@@ -571,7 +598,7 @@
         // Export logs
         async function exportLogs() {
             try {
-                const token = localStorage.getItem('auth_token');
+                const token = localStorage.getItem('supabase_access_token');
                 const params = new URLSearchParams(currentFilters);
                 params.delete('page');
                 params.delete('limit');
@@ -623,8 +650,6 @@
             return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
         }
 
-        // Load stats on page load
-        loadStats();
     </script>
 </body>
 </html>
