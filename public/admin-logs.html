@@ -88,9 +88,9 @@
                         <option value="debug">Debug</option>
                         <option value="info">Info</option>
                         <option value="warn">Warn</option>
-                        <option value="error" selected>Error</option>
+                        <option value="error">Error</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                    <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple. Leave empty to show all levels.</p>
                 </div>
                 
                 <!-- Source -->
@@ -239,7 +239,7 @@
         let totalPages = 1;
         let currentFilters = {};
 
-        // Initialize page
+            // Initialize page
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 currentUser = await initNavigationWithAuth();
@@ -257,8 +257,10 @@
                 return;
             }
             
-            // Load stats after authentication is confirmed
-            loadStats();
+            // Load stats and all logs after authentication is confirmed
+            await loadStats();
+            // Automatically load all logs on page load (no filters)
+            await searchLogs(1);
         });
 
         // Load stats on page load
@@ -440,7 +442,10 @@
         function clearFilters() {
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
-            document.getElementById('logLevel').selectedIndex = 3; // Select "error"
+            // Clear all selections in multi-select
+            Array.from(document.getElementById('logLevel').options).forEach(option => {
+                option.selected = false;
+            });
             document.getElementById('source').value = '';
             document.getElementById('email').value = '';
             document.getElementById('transactionId').value = '';
