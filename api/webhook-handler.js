@@ -1,5 +1,5 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
-import { syncAuthorizeNetSubscription } from '../lib/authorize-net-sync.js';
+import { syncAuthorizeNetSubscription, syncAuthorizeNetSubscriptionCancellation } from '../lib/authorize-net-sync.js';
 import { logInfo, logError } from '../lib/logger.js';
 
 export default async function handler(req, res) {
@@ -77,8 +77,9 @@ export default async function handler(req, res) {
                         break;
 
                     case 'net.authorize.customer.subscription.cancelled':
-                        console.log('Subscription cancelled:', eventBody.payload);
-                        // Could add cancellation sync here if needed
+                        console.log('Calling syncAuthorizeNetSubscriptionCancellation for subscription cancellation webhook...');
+                        synchronizationResult = await syncAuthorizeNetSubscriptionCancellation(eventBody);
+                        console.log('Subscription cancellation sync result:', JSON.stringify(synchronizationResult, null, 2));
                         break;
 
                     case 'net.authorize.customer.subscription.suspended':

@@ -100,6 +100,17 @@ This document lists all tags that are automatically added to GoHighLevel contact
 - **Matching Logic**: Based on interval only (not amount), since amounts can vary
 - **Assumption**: Only ONE subscription product per interval (e.g., only one monthly subscription)
 - **Paired with**: `subscription-created`
+- **Removed when**: Subscription is cancelled (see `subscription-cancelled` tag below)
+
+#### `subscription-cancelled`
+- **When**: When a subscription is cancelled in Authorize.net
+- **Where**: `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscriptionCancellation()`
+- **Why**: Identifies contacts who have cancelled their subscriptions
+- **Trigger**: Authorize.net webhook `net.authorize.customer.subscription.cancelled`
+- **Note**: Requires subscription cancellation webhook events to be enabled in Authorize.net
+- **Also removes**: 
+  - The interval-based subscription tag (e.g., `monthly-bookkeeping-subscription`)
+  - The `subscription-created` tag
 
 ---
 
@@ -175,6 +186,7 @@ This document lists all tags that are automatically added to GoHighLevel contact
 | Product name tags | `lib/authorize-net-sync.js` | `buildProductTags()` → `slugifyProductTag()` |
 | `subscription-created` | `lib/authorize-net-sync.js` | `syncAuthorizeNetSubscription()` |
 | Interval-based subscription tags | `lib/authorize-net-sync.js` | `getSubscriptionTagsByInterval()` → `syncAuthorizeNetSubscription()` |
+| `subscription-cancelled` | `lib/authorize-net-sync.js` | `syncAuthorizeNetSubscriptionCancellation()` |
 
 ---
 
