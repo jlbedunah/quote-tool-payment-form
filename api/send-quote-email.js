@@ -454,7 +454,8 @@ async function syncQuoteToGHL(quoteData, recipientEmail) {
     services,
     oneTimeTotal,
     subscriptionMonthlyTotal,
-    grandTotal
+    grandTotal,
+    internalComment
   } = quoteData;
 
   // Use recipientEmail from the email being sent (may differ from quoteData.email)

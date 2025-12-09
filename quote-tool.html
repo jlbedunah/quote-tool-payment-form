@@ -195,8 +195,15 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
-                                <input type="number" name="unitCost0" min="0" step="0.01" required onchange="calculateSubtotal(0)"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                                <div class="relative">
+                                    <input type="number" name="unitCost0" id="unitCost0" min="0" step="0.01" required 
+                                           onchange="calculateSubtotal(0)" oninput="markUnitCostAsModified(0)"
+                                           data-default-price=""
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                                    <span id="unitCostModified0" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-orange-600 font-medium hidden" title="Price modified from default">
+                                        ✏️ Modified
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 mt-4 items-end">
@@ -237,6 +244,28 @@
                     </svg>
                     Add Another Service
                 </button>
+            </div>
+
+            <!-- Internal Comments Section -->
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center mb-4">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Internal Comments</h2>
+                    <span class="ml-2 text-sm text-gray-500">(Not visible to customer)</span>
+                </div>
+                <div>
+                    <label for="internalComment" class="block text-sm font-medium text-gray-700 mb-2">
+                        Internal Notes
+                    </label>
+                    <textarea id="internalComment" name="internalComment" rows="3"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                              placeholder="Add internal notes or comments about this quote (will be added to GHL contact record)..."></textarea>
+                    <p class="mt-1 text-xs text-gray-500">These notes will be attached to the contact record in GoHighLevel but will not be included in the customer-facing quote.</p>
+                </div>
             </div>
 
             <!-- Total Section -->
@@ -478,8 +507,15 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
-                        <input type="number" name="unitCost${rowCount}" min="0" step="0.01" required onchange="calculateSubtotal(${rowCount})"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        <div class="relative">
+                            <input type="number" name="unitCost${rowCount}" id="unitCost${rowCount}" min="0" step="0.01" required 
+                                   onchange="calculateSubtotal(${rowCount})" oninput="markUnitCostAsModified(${rowCount})"
+                                   data-default-price=""
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                            <span id="unitCostModified${rowCount}" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-orange-600 font-medium hidden" title="Price modified from default">
+                                ✏️ Modified
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 mt-4 items-end">
@@ -546,6 +582,23 @@
                     removeBtn.style.display = 'none';
                 }
             });
+        }
+
+        function markUnitCostAsModified(rowIndex) {
+            const unitCostInput = document.getElementById(`unitCost${rowIndex}`);
+            const modifiedIndicator = document.getElementById(`unitCostModified${rowIndex}`);
+            
+            if (unitCostInput && modifiedIndicator) {
+                const currentValue = parseFloat(unitCostInput.value) || 0;
+                const defaultPrice = parseFloat(unitCostInput.getAttribute('data-default-price')) || 0;
+                
+                // Show indicator if value differs from default (and default is set)
+                if (defaultPrice > 0 && Math.abs(currentValue - defaultPrice) > 0.01) {
+                    modifiedIndicator.classList.remove('hidden');
+                } else {
+                    modifiedIndicator.classList.add('hidden');
+                }
+            }
         }
 
         function calculateSubtotal(rowIndex) {
@@ -646,6 +699,12 @@
                     }
                 });
             });
+            
+            // Add internal comment if provided
+            const internalComment = document.getElementById('internalComment')?.value?.trim();
+            if (internalComment) {
+                params.append('internalComment', internalComment);
+            }
             
             // Generate the URL - ensure it points to payment-form-robust.html
             let baseUrl;
@@ -1027,6 +1086,12 @@
                 emailData.quoteData.oneTimeTotal = document.getElementById('oneTimeTotal')?.textContent || '0.00';
                 emailData.quoteData.subscriptionMonthlyTotal = document.getElementById('subscriptionTotal')?.textContent || '0.00';
                 emailData.quoteData.grandTotal = document.getElementById('grandTotal')?.textContent || '0.00';
+                
+                // Add internal comment if provided
+                const internalComment = document.getElementById('internalComment')?.value?.trim();
+                if (internalComment) {
+                    emailData.quoteData.internalComment = internalComment;
+                }
                 
                 // Send to serverless function with bypass token
                 const response = await fetch('/api/send-quote-email', {

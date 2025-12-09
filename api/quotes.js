@@ -336,7 +336,8 @@ async function syncLinkQuoteToGHL(quoteData, savedQuote) {
     oneTimeTotal,
     subscriptionMonthlyTotal,
     grandTotal,
-    payment_link
+    payment_link,
+    internalComment
   } = quoteData;
 
   const contactEmail = email?.toLowerCase();
