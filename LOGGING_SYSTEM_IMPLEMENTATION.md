@@ -183,3 +183,4 @@ await logInfo(
 - Logs are retained for 90 days (configurable in migration)
 - The system gracefully handles Supabase unavailability (falls back to console only)
 
+

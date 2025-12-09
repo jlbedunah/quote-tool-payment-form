@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { findOrCreateContact, appendNoteToContact, addTagsToContact } from '../lib/gohighlevel.js';
 import { supabase } from '../lib/supabase.js';
 import { verifyAuth } from '../lib/auth-middleware.js';
+import { notifyQuoteSent } from '../lib/slack-notifications.js';
 import { randomUUID } from 'crypto';
 
 // Check if API key is available
@@ -157,6 +158,31 @@ export default async function handler(req, res) {
         success: false,
         error: ghlError.message
       };
+    }
+
+    // Send Slack notification for quote sent
+    try {
+      const customerName = quoteData.customerName || 
+                          (quoteData.firstName && quoteData.lastName 
+                            ? `${quoteData.firstName} ${quoteData.lastName}` 
+                            : quoteData.firstName || quoteData.lastName || null);
+      const totalAmount = quoteData.grandTotal || quoteData.oneTimeTotal || quoteData.totalAmount || quoteData.total || 0;
+      const slackResult = await notifyQuoteSent({
+        customerName,
+        customerEmail: recipientEmail,
+        totalAmount,
+        services: quoteData.services || [],
+        quoteNumber: savedQuote?.quote_number || null,
+        quoteId: savedQuote?.id || null
+      });
+      if (slackResult.success) {
+        console.log('Slack notification sent for quote');
+      } else if (slackResult.skipped) {
+        console.log('Slack notification skipped:', slackResult.reason);
+      }
+    } catch (slackError) {
+      console.error('Error sending Slack notification (non-fatal):', slackError);
+      // Don't fail the email send if Slack notification fails
     }
 
     return res.status(200).json({ 
