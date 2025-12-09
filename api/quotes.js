@@ -397,6 +397,11 @@ async function syncLinkQuoteToGHL(quoteData, savedQuote) {
       servicesText += ` = $${subtotalNumber.toFixed(2)}`;
     });
   }
+  
+  // Add internal comment if provided
+  if (internalComment && internalComment.trim()) {
+    servicesText += `\n\n--- Internal Comment ---\n${internalComment.trim()}`;
+  }
 
   // Build note body
   const noteBody = `🔗 Quote Created (Payment Link)
