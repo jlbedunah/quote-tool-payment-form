@@ -139,7 +139,7 @@ This document lists all tags that are automatically added to GoHighLevel contact
    - Product name tags (one per product/service)
    - `quote-paid` (if quote is found and updated to paid)
 
-### Subscription Flow
+### Subscription Creation Flow
 
 1. Subscription created in Authorize.net
 2. Webhook received: `net.authorize.customer.subscription.created`
@@ -148,6 +148,18 @@ This document lists all tags that are automatically added to GoHighLevel contact
 5. Tags added:
    - `subscription-created` (always)
    - Product-specific tag based on interval (e.g., `monthly-bookkeeping-subscription`)
+
+### Subscription Cancellation Flow
+
+1. Subscription cancelled in Authorize.net
+2. Webhook received: `net.authorize.customer.subscription.cancelled`
+3. `lib/authorize-net-sync.js` → `syncAuthorizeNetSubscriptionCancellation()`
+4. Extracts billing interval from webhook
+5. Tags removed:
+   - `subscription-created`
+   - Product-specific tag based on interval (e.g., `monthly-bookkeeping-subscription`)
+6. Tag added:
+   - `subscription-cancelled`
 
 ---
 
