@@ -358,6 +358,8 @@
                 }
                 
                 const data = await response.json();
+                // Store logs in memory for quick detail access
+                currentLogsData = data.logs || [];
                 displayLogs(data.logs);
                 updatePagination(data);
             } catch (error) {
@@ -476,62 +478,46 @@
             searchLogs(1);
         }
 
-        // Show log detail - find in current results or fetch
+        // Store logs in memory for quick access
+        let currentLogsData = [];
+        
+        // Show log detail - fetch from API by ID
         async function showLogDetail(logId) {
-            // First try to find in current table
-            const currentLogs = Array.from(document.querySelectorAll('#logsTableBody tr')).map(row => {
-                const button = row.querySelector('button[onclick*="showLogDetail"]');
-                if (button) {
-                    const onclick = button.getAttribute('onclick');
-                    const match = onclick.match(/showLogDetail\('([^']+)'\)/);
-                    if (match && match[1] === logId) {
-                        // Extract data from row
-                        const cells = row.querySelectorAll('td');
-                        return {
-                            id: logId,
-                            created_at: cells[0].textContent.trim(),
-                            level: cells[1].querySelector('span').textContent.toLowerCase(),
-                            source: cells[2].getAttribute('title') || cells[2].textContent.trim(),
-                            function_name: cells[3].textContent.trim() !== '-' ? cells[3].textContent.trim() : null,
-                            message: cells[4].getAttribute('title') || cells[4].textContent.trim(),
-                            metadata: {
-                                email: cells[5].textContent.trim() !== '-' ? cells[5].textContent.trim() : null,
-                                transactionId: cells[6].textContent.trim() !== '-' ? cells[6].textContent.trim() : null
-                            }
-                        };
-                    }
-                }
-                return null;
-            }).filter(Boolean);
+            console.log('Loading log detail for ID:', logId);
             
-            const log = currentLogs.find(l => l.id === logId);
-            
-            if (log) {
-                displayLogDetail(log);
+            // First check if we have it in current results
+            const cachedLog = currentLogsData.find(l => l.id === logId);
+            if (cachedLog) {
+                console.log('Found log in cache');
+                displayLogDetail(cachedLog);
                 return;
             }
             
-            // If not found, fetch from API
+            // Fetch specific log from API by ID
             try {
                 const token = localStorage.getItem('supabase_access_token');
-                // Search for this specific log by including it in a broader search
-                const response = await fetch(`/api/logs?limit=1000`, {
+                if (!token) {
+                    alert('No authentication token found. Please log in again.');
+                    return;
+                }
+                
+                const response = await fetch(`/api/logs?id=${encodeURIComponent(logId)}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Failed to load log details');
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                const foundLog = data.logs.find(l => l.id === logId);
                 
-                if (foundLog) {
-                    displayLogDetail(foundLog);
+                if (data.log) {
+                    displayLogDetail(data.log);
                 } else {
-                    alert('Log not found. It may have been deleted or is outside the current search results.');
+                    alert('Log not found. It may have been deleted.');
                 }
             } catch (error) {
                 console.error('Error loading log detail:', error);

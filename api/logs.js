@@ -26,6 +26,7 @@ export default async function handler(req, res) {
 
   try {
     const {
+      id, // Support fetching a single log by ID
       startDate,
       endDate,
       level,
@@ -39,6 +40,26 @@ export default async function handler(req, res) {
       page = '1',
       limit = '50'
     } = req.query;
+
+    // If ID is provided, fetch single log
+    if (id) {
+      const { data: log, error } = await supabase
+        .from('application_logs')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching log by ID:', error);
+        return res.status(500).json({ error: 'Failed to fetch log', details: error.message });
+      }
+
+      if (!log) {
+        return res.status(404).json({ error: 'Log not found' });
+      }
+
+      return res.status(200).json({ log });
+    }
 
     // Build Supabase query
     let query = supabase
