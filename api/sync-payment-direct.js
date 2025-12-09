@@ -1,4 +1,5 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
+import { logInfo, logError } from '../lib/logger.js';
 
 /**
  * Direct payment sync endpoint for local development
@@ -35,6 +36,17 @@ export default async function handler(req, res) {
       amount,
       environment: process.env.VERCEL_ENV
     });
+    
+    await logInfo(
+      'api/sync-payment-direct.js',
+      'Direct payment sync requested (dev mode)',
+      {
+        transactionId,
+        email,
+        amount,
+        environment: process.env.VERCEL_ENV
+      }
+    );
 
     // Build a mock webhook event body from the payment response
     const eventBody = {
@@ -67,6 +79,16 @@ export default async function handler(req, res) {
     const result = await syncAuthorizeNetTransaction(eventBody);
 
     if (result.skipped) {
+      await logInfo(
+        'api/sync-payment-direct.js',
+        'Direct payment sync skipped',
+        {
+          transactionId,
+          email,
+          reason: result.reason
+        }
+      );
+      
       return res.status(200).json({
         success: false,
         skipped: true,
@@ -74,6 +96,16 @@ export default async function handler(req, res) {
         result
       });
     }
+
+    await logInfo(
+      'api/sync-payment-direct.js',
+      'Direct payment sync completed successfully (dev mode)',
+      {
+        transactionId,
+        email,
+        contactId: result.contactId
+      }
+    );
 
     return res.status(200).json({
       success: true,
@@ -83,6 +115,17 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error in direct payment sync:', error);
+    
+    await logError(
+      'api/sync-payment-direct.js',
+      'Error in direct payment sync',
+      {
+        transactionId: req.body?.transactionId,
+        email: req.body?.email
+      },
+      error
+    );
+    
     return res.status(500).json({
       success: false,
       error: 'Failed to sync payment',
@@ -90,4 +133,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
 

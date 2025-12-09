@@ -1,5 +1,6 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
 import { syncAuthorizeNetSubscription } from '../lib/authorize-net-sync.js';
+import { logInfo, logError } from '../lib/logger.js';
 
 export default async function handler(req, res) {
     // Only allow POST requests
@@ -16,6 +17,18 @@ export default async function handler(req, res) {
             eventType: eventBody?.eventType,
             timestamp: new Date().toISOString()
         });
+        
+        // Log webhook receipt to application logs
+        await logInfo(
+            'api/webhook-handler.js',
+            'Authorize.net webhook received',
+            {
+                eventType: eventBody?.eventType,
+                transactionId: eventBody?.payload?.id,
+                email: eventBody?.payload?.customer?.email || eventBody?.payload?.billTo?.email,
+                amount: eventBody?.payload?.authAmount || eventBody?.payload?.order?.amount
+            }
+        );
         
         // Log full webhook payload for debugging (first 1000 chars)
         console.log('Webhook payload (first 1000 chars):', JSON.stringify(eventBody).substring(0, 1000));
@@ -111,6 +124,17 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Webhook processing error:', error);
+        
+        // Log error to application logs
+        await logError(
+            'api/webhook-handler.js',
+            'Error processing Authorize.net webhook',
+            {
+                eventType: req.body?.eventType,
+                errorMessage: error.message
+            },
+            error
+        );
 
         // Even on error, return 200 to prevent webhook retries
         // Log the error for debugging but don't fail the webhook
