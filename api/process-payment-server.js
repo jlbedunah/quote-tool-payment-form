@@ -583,6 +583,68 @@ export default async function paymentHandler(req, res) {
             responseData.subscriptionWarnings = subscriptionResults.filter(r => !r.success);
         }
 
+        // If payment was successful, trigger GHL sync directly (webhook may not fire immediately or may not be configured)
+        if (transactionSuccess && transactionId && email) {
+            try {
+                // Import sync function dynamically to avoid loading issues
+                const { syncAuthorizeNetTransaction } = await import('../lib/authorize-net-sync.js');
+                
+                // Build webhook event body from payment response
+                const eventBody = {
+                    eventType: 'net.authorize.payment.authcapture.created',
+                    id: `direct-${transactionId}`,
+                    eventDate: new Date().toISOString(),
+                    payload: {
+                        id: transactionId,
+                        customer: {
+                            email: email,
+                            firstName: firstName || '',
+                            lastName: lastName || '',
+                            phoneNumber: req.body.phone || ''
+                        },
+                        billTo: {
+                            email: email,
+                            firstName: billFirstName,
+                            lastName: billLastName,
+                            company: billCompany,
+                            address: combinedBillAddress,
+                            city: billCity,
+                            state: billState,
+                            zip: billZip,
+                            country: billCountryValue,
+                            phoneNumber: req.body.phone || ''
+                        },
+                        order: {
+                            amount: chargeAmount.toString(),
+                            invoiceNumber: invoiceNumber,
+                            lineItems: {
+                                lineItem: chargeLineItems.map((item, idx) => ({
+                                    itemId: item?.itemId || String(idx + 1),
+                                    name: item?.name || '',
+                                    description: item?.description || '',
+                                    quantity: String(item?.quantity || 1),
+                                    unitPrice: String(item?.unitPrice || 0)
+                                }))
+                            }
+                        },
+                        authAmount: chargeAmount.toString(),
+                        currencyCode: 'USD'
+                    }
+                };
+
+                // Trigger sync (non-blocking - don't wait for it to complete)
+                syncAuthorizeNetTransaction(eventBody).catch(syncError => {
+                    console.error('Error syncing payment to GHL (non-blocking):', syncError);
+                    // Don't fail the payment response if sync fails
+                });
+                
+                console.log('✅ Payment sync to GHL triggered (non-blocking)');
+            } catch (syncImportError) {
+                console.error('Error importing sync function:', syncImportError);
+                // Don't fail the payment response if sync import fails
+            }
+        }
+
         console.log('Sending response:', JSON.stringify(responseData, null, 2));
         return res.status(overallSuccess ? 200 : 400).json(responseData);
     } catch (error) {
