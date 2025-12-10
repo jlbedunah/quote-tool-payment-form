@@ -523,8 +523,19 @@ async function syncQuoteToGHL(quoteData, recipientEmail) {
   }
   
   // Add internal comment if provided
+  console.log('Checking for internal comment in syncQuoteToGHL:', {
+    hasInternalComment: !!internalComment,
+    internalCommentType: typeof internalComment,
+    internalCommentValue: internalComment,
+    internalCommentTrimmed: internalComment ? internalComment.trim() : null,
+    quoteDataKeys: Object.keys(quoteData || {})
+  });
+  
   if (internalComment && internalComment.trim()) {
     servicesText += `\n\n--- Internal Comment ---\n${internalComment.trim()}`;
+    console.log('✅ Added internal comment to note:', internalComment.trim().substring(0, 100));
+  } else {
+    console.log('❌ No internal comment to add to note');
   }
 
   // Build note body
