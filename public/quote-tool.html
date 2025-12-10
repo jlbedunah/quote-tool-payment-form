@@ -913,7 +913,14 @@
                     if (serviceRow && price) {
                         const unitCostInput = serviceRow.querySelector(`input[name="unitCost${rowIndex}"]`);
                         if (unitCostInput) {
+                            // Store default price and set value
+                            unitCostInput.setAttribute('data-default-price', price);
                             unitCostInput.value = price;
+                            // Reset modified indicator
+                            const modifiedIndicator = document.getElementById(`unitCostModified${rowIndex}`);
+                            if (modifiedIndicator) {
+                                modifiedIndicator.classList.add('hidden');
+                            }
                         }
                     }
                     
@@ -1124,6 +1131,12 @@
                 emailData.quoteData.oneTimeTotal = document.getElementById('oneTimeTotal')?.textContent || '0.00';
                 emailData.quoteData.subscriptionMonthlyTotal = document.getElementById('subscriptionTotal')?.textContent || '0.00';
                 emailData.quoteData.grandTotal = document.getElementById('grandTotal')?.textContent || '0.00';
+                
+                // Add internal comment if provided
+                const internalComment = document.getElementById('internalComment')?.value?.trim();
+                if (internalComment) {
+                    emailData.quoteData.internalComment = internalComment;
+                }
                 
                 // Send to serverless function with authentication
                 const accessToken = localStorage.getItem('supabase_access_token');
