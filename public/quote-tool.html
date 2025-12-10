@@ -1134,8 +1134,17 @@
                 
                 // Add internal comment if provided
                 const internalComment = document.getElementById('internalComment')?.value?.trim();
+                console.log('Internal comment from form:', {
+                    hasElement: !!document.getElementById('internalComment'),
+                    value: document.getElementById('internalComment')?.value,
+                    trimmed: internalComment,
+                    willInclude: !!internalComment
+                });
                 if (internalComment) {
                     emailData.quoteData.internalComment = internalComment;
+                    console.log('Added internal comment to emailData:', internalComment.substring(0, 50) + '...');
+                } else {
+                    console.log('No internal comment to include');
                 }
                 
                 // Send to serverless function with authentication

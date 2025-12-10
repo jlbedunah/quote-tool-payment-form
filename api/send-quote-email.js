@@ -55,7 +55,9 @@ export default async function handler(req, res) {
       quoteDataKeys: quoteData ? Object.keys(quoteData) : 'No quoteData',
       servicesCount: quoteData?.services ? quoteData.services.length : 0,
       servicesSample: quoteData?.services ? quoteData.services[0] : 'No services',
-      allServices: quoteData?.services ? quoteData.services : 'No services array'
+      allServices: quoteData?.services ? quoteData.services : 'No services array',
+      hasInternalComment: !!quoteData?.internalComment,
+      internalComment: quoteData?.internalComment ? quoteData.internalComment.substring(0, 100) + '...' : 'No internal comment'
     });
 
     // Validate required fields
