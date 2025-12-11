@@ -172,22 +172,7 @@
                                            autocomplete="off" placeholder="Type to search services...">
                                     <div id="serviceDropdown0" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                         <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Catch-up Bookkeeping</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (LLC)</div>
-                                                <div class="text-sm text-gray-500">$1.99</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (S-Corp)</div>
-                                                <div class="text-sm text-gray-500">$2.01</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19" data-subscription="true" data-interval="monthly">
-                                                <div class="font-medium">Monthly Bookkeeping Subscription</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
+                                            <div class="text-gray-500 text-sm px-3 py-2">Loading products...</div>
                                             <div class="border-t border-gray-200 mt-2 pt-2">
                                                 <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
                                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -498,22 +483,7 @@
                                    autocomplete="off" placeholder="Type to search services...">
                             <div id="serviceDropdown${rowCount}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                                 <div class="p-2">
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Catch-up Bookkeeping" data-price="2.19" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Catch-up Bookkeeping</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (LLC)" data-price="1.99" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (LLC)</div>
-                                                <div class="text-sm text-gray-500">$1.99</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Tax Return (S-Corp)" data-price="2.01" data-subscription="false" data-interval="">
-                                                <div class="font-medium">Tax Return (S-Corp)</div>
-                                                <div class="text-sm text-gray-500">$2.01</div>
-                                            </div>
-                                            <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" data-value="Monthly Bookkeeping Subscription" data-price="2.19" data-subscription="true" data-interval="monthly">
-                                                <div class="font-medium">Monthly Bookkeeping Subscription</div>
-                                                <div class="text-sm text-gray-500">$2.19</div>
-                                            </div>
+                                    <div class="text-gray-500 text-sm px-3 py-2">Loading products...</div>
                                     <div class="border-t border-gray-200 mt-2 pt-2">
                                         <div class="add-service-option px-3 py-2 hover:bg-green-50 cursor-pointer rounded text-green-600 font-medium">
                                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -585,6 +555,11 @@
             // Initialize dropdown functionality for the new row
             initializeServiceDropdown(rowCount - 1);
             setSubscriptionState(rowCount - 1, false);
+            
+            // Populate dropdown with products if available
+            if (products.length > 0) {
+                populateDropdown(rowCount - 1);
+            }
         }
 
         function removeRow(rowIndex) {
@@ -869,13 +844,112 @@
             });
         }
 
+        // Global variable to store products
+        let products = [];
+
+        // Fetch products from API
+        async function fetchProducts() {
+            try {
+                console.log('Fetching products from /api/products...');
+                const response = await fetch('/api/products');
+                const data = await response.json();
+                console.log('Products API response:', data);
+                if (data.success && data.products) {
+                    products = data.products;
+                    console.log(`Loaded ${products.length} products:`, products);
+                    // Populate all existing dropdowns
+                    populateAllDropdowns();
+                } else {
+                    console.error('Failed to fetch products:', data);
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            }
+        }
+
+        // Generate product options HTML
+        function generateProductOptionsHTML() {
+            if (!products || products.length === 0) {
+                return '<div class="px-3 py-2 text-gray-500 text-sm">No products available</div>';
+            }
+            
+            return products.map(product => {
+                const price = product.unitPrice || 0;
+                const isSubscription = product.isSubscription === true;
+                const interval = product.subscriptionInterval || '';
+                return `
+                    <div class="service-option px-3 py-2 hover:bg-blue-50 cursor-pointer rounded" 
+                         data-value="${product.name}" 
+                         data-price="${price}" 
+                         data-subscription="${isSubscription}" 
+                         data-interval="${interval}">
+                        <div class="font-medium">${product.name}</div>
+                        <div class="text-sm text-gray-500">$${price.toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Populate a specific dropdown with products
+        function populateDropdown(rowIndex) {
+            const dropdown = document.getElementById(`serviceDropdown${rowIndex}`);
+            if (!dropdown) {
+                console.warn(`Dropdown serviceDropdown${rowIndex} not found`);
+                return;
+            }
+            
+            const dropdownContent = dropdown.querySelector('.p-2');
+            if (!dropdownContent) {
+                console.warn(`Dropdown content not found for row ${rowIndex}`);
+                return;
+            }
+            
+            // Get the "Add service" section HTML BEFORE replacing content (keep it at the end)
+            const addServiceSection = dropdownContent.querySelector('.border-t');
+            const addServiceHTML = addServiceSection ? addServiceSection.outerHTML : '';
+            
+            // Generate products HTML
+            const productsHTML = generateProductOptionsHTML();
+            console.log(`Generated products HTML for row ${rowIndex}:`, productsHTML.substring(0, 100) + '...');
+            
+            // Replace content with products
+            dropdownContent.innerHTML = productsHTML;
+            
+            // Re-add the "Add service" option if it existed
+            if (addServiceHTML) {
+                dropdownContent.insertAdjacentHTML('beforeend', addServiceHTML);
+            }
+            
+            console.log(`Successfully populated dropdown for row ${rowIndex}`);
+        }
+
+        // Populate all existing dropdowns
+        function populateAllDropdowns() {
+            console.log('Populating all dropdowns...');
+            const rows = document.querySelectorAll('.service-row');
+            console.log(`Found ${rows.length} service rows`);
+            rows.forEach((row, index) => {
+                const rowIndexAttr = row.getAttribute('data-row');
+                if (rowIndexAttr !== null) {
+                    const rowIndex = parseInt(rowIndexAttr);
+                    console.log(`Populating dropdown for row ${rowIndex}`);
+                    populateDropdown(rowIndex);
+                }
+            });
+        }
+
         // Service dropdown functionality
         function initializeServiceDropdown(rowIndex) {
             const input = document.getElementById(`serviceInput${rowIndex}`);
             const dropdown = document.getElementById(`serviceDropdown${rowIndex}`);
-            const addServiceText = dropdown.querySelector('.add-service-text');
+            const addServiceText = dropdown?.querySelector('.add-service-text');
             
             if (!input || !dropdown) return;
+            
+            // Populate dropdown with products if available
+            if (products.length > 0) {
+                populateDropdown(rowIndex);
+            }
             
             // Show dropdown on focus
             input.addEventListener('focus', function() {
@@ -1208,6 +1282,35 @@
         document.getElementById('emailModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeEmailModal();
+            }
+        });
+
+        // Initialize on page load
+        function initializeQuoteTool() {
+            console.log('Initializing quote tool...');
+            // Fetch products and populate dropdowns
+            fetchProducts();
+            
+            // Initialize the first service dropdown
+            initializeServiceDropdown(0);
+        }
+
+        // Run initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeQuoteTool);
+        } else {
+            // DOM is already loaded
+            initializeQuoteTool();
+        }
+        
+        // Also try on window load as a backup
+        window.addEventListener('load', function() {
+            console.log('Window loaded - checking if products need to be populated...');
+            if (products.length > 0) {
+                populateAllDropdowns();
+            } else {
+                console.log('Products not loaded yet, fetching...');
+                fetchProducts();
             }
         });
     </script>
