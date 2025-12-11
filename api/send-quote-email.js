@@ -76,11 +76,42 @@ export default async function handler(req, res) {
     // Generate email content
     const emailContent = generateEmailContent(quoteData, message);
 
+    // Determine sender and reply-to emails
+    // Use verified domain for 'from' (required by Resend), user's email for 'replyTo' (replies go to user)
+    const verifiedDomain = 'mybookkeepers.com';
+    const defaultFrom = 'quotes@mybookkeepers.com';
+    const defaultReplyTo = 'jason@mybookkeepers.com';
+    
+    // If user is logged in and their email is from the verified domain, use it for 'from'
+    // Otherwise use default 'from' and user's email for 'replyTo'
+    let senderEmail = defaultFrom;
+    let replyToEmail = defaultReplyTo;
+    
+    if (user?.email) {
+      const userEmailDomain = user.email.split('@')[1];
+      if (userEmailDomain === verifiedDomain) {
+        // User's email is from verified domain, can use it as 'from'
+        senderEmail = user.email;
+        replyToEmail = user.email;
+      } else {
+        // User's email is from different domain, use for replyTo only
+        replyToEmail = user.email;
+      }
+    }
+
+    console.log('Sending email:', {
+      from: senderEmail,
+      replyTo: replyToEmail,
+      to: recipientEmail,
+      userEmail: user?.email || 'No user logged in',
+      usingVerifiedDomain: senderEmail.includes(verifiedDomain)
+    });
+
     // Send email using Resend
     const data = await resend.emails.send({
-      from: 'quotes@mybookkeepers.com',
+      from: senderEmail,
       to: [recipientEmail],
-      replyTo: 'jason@mybookkeepers.com',
+      replyTo: replyToEmail,
       subject: subject || 'Your Quote Request',
       html: emailContent,
     });
