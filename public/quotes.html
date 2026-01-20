@@ -137,12 +137,40 @@
                 const totals = quote.totals || {};
                 const amount = totals.grand_total || totals.one_time_total || 0;
                 
-                const paymentStatusBadge = {
-                    'pending': '<span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">Pending</span>',
-                    'paid': '<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">Paid</span>',
-                    'failed': '<span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">Failed</span>',
-                    'refunded': '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Refunded</span>'
-                }[quote.payment_status] || '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Unknown</span>';
+                // Payment plan status badge
+                let paymentStatusBadge;
+                if (quote.is_payment_plan) {
+                    const completed = quote.payment_plan_completed_payments || 0;
+                    const total = quote.payment_plan_installments || 1;
+                    const planStatus = quote.payment_plan_status || 'pending';
+                    const progressPercent = Math.round((completed / total) * 100);
+
+                    if (planStatus === 'completed') {
+                        paymentStatusBadge = `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">Plan Complete (${completed}/${total})</span>`;
+                    } else if (planStatus === 'active') {
+                        paymentStatusBadge = `
+                            <div class="flex flex-col items-start gap-1">
+                                <span class="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">Payment Plan (${completed}/${total})</span>
+                                <div class="w-20 bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${progressPercent}%"></div>
+                                </div>
+                            </div>`;
+                    } else if (planStatus === 'suspended') {
+                        paymentStatusBadge = `<span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">Plan Suspended (${completed}/${total})</span>`;
+                    } else if (planStatus === 'cancelled') {
+                        paymentStatusBadge = `<span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">Plan Cancelled (${completed}/${total})</span>`;
+                    } else {
+                        paymentStatusBadge = `<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Plan Pending (0/${total})</span>`;
+                    }
+                } else {
+                    // Standard payment status badge
+                    paymentStatusBadge = {
+                        'pending': '<span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">Pending</span>',
+                        'paid': '<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">Paid</span>',
+                        'failed': '<span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">Failed</span>',
+                        'refunded': '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Refunded</span>'
+                    }[quote.payment_status] || '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">Unknown</span>';
+                }
 
                 const deliveryMethodBadge = {
                     'payment_link': '<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">Payment Link</span>',
@@ -193,6 +221,22 @@
             const subscriptionTotal = totals.subscription_monthly_total || 0;
             const grandTotal = totals.grand_total || oneTimeTotal;
 
+            // Build payment plan info if applicable
+            let paymentPlanInfo = '';
+            if (quote.is_payment_plan) {
+                const completed = quote.payment_plan_completed_payments || 0;
+                const total = quote.payment_plan_installments || 0;
+                const planStatus = quote.payment_plan_status || 'pending';
+                const planTotal = quote.payment_plan_total_amount || 0;
+                const installmentAmount = quote.payment_plan_installment_amount || 0;
+
+                paymentPlanInfo = `\n--- PAYMENT PLAN ---\n` +
+                    `Status: ${planStatus}\n` +
+                    `Progress: ${completed}/${total} payments\n` +
+                    `Total Amount: $${parseFloat(planTotal).toFixed(2)}\n` +
+                    `Per Payment: $${parseFloat(installmentAmount).toFixed(2)}\n`;
+            }
+
             alert(`Quote Details:\n\n` +
                 `Quote #: ${quote.quote_number || quote.id}\n` +
                 `Customer: ${quote.customer_first_name} ${quote.customer_last_name}\n` +
@@ -201,6 +245,7 @@
                 `Company: ${quote.customer_company_name || 'N/A'}\n` +
                 `Delivery Method: ${quote.delivery_method}\n` +
                 `Payment Status: ${quote.payment_status}\n` +
+                paymentPlanInfo +
                 `\nServices:\n${servicesList}\n\n` +
                 `One-Time Total: $${parseFloat(oneTimeTotal).toFixed(2)}\n` +
                 (subscriptionTotal > 0 ? `Monthly Subscription: $${parseFloat(subscriptionTotal).toFixed(2)}\n` : '') +

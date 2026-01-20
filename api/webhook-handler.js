@@ -1,6 +1,11 @@
 import { syncAuthorizeNetTransaction } from '../lib/authorize-net-sync.js';
 import { syncAuthorizeNetSubscription, syncAuthorizeNetSubscriptionCancellation } from '../lib/authorize-net-sync.js';
 import { logInfo, logError } from '../lib/logger.js';
+import {
+    handlePaymentPlanPayment,
+    handlePaymentPlanSuspension,
+    handlePaymentPlanCancellation
+} from '../lib/payment-plan-utils.js';
 
 export default async function handler(req, res) {
     // Only allow POST requests
@@ -45,9 +50,30 @@ export default async function handler(req, res) {
             if (eventType.startsWith('net.authorize.payment.')) {
                 switch (eventType) {
                     case 'net.authorize.payment.authcapture.created':
+                        // First, check if this is a payment plan recurring payment
+                        const subscriptionId = eventBody?.payload?.subscription?.id;
+                        let paymentPlanResult = null;
+                        if (subscriptionId) {
+                            console.log('Checking if this payment is part of a payment plan...');
+                            paymentPlanResult = await handlePaymentPlanPayment(eventBody);
+                            if (paymentPlanResult && !paymentPlanResult.skipped) {
+                                console.log('Payment plan payment processed:', JSON.stringify(paymentPlanResult, null, 2));
+                            }
+                        }
+
+                        // Continue with regular transaction sync
                         console.log('Calling syncAuthorizeNetTransaction for payment webhook...');
                         synchronizationResult = await syncAuthorizeNetTransaction(eventBody);
                         console.log('Synchronization result:', JSON.stringify(synchronizationResult, null, 2));
+
+                        // Add payment plan result to synchronization result
+                        if (paymentPlanResult && !paymentPlanResult.skipped) {
+                            synchronizationResult = {
+                                ...synchronizationResult,
+                                paymentPlanUpdate: paymentPlanResult
+                            };
+                        }
+
                         if (synchronizationResult?.quoteUpdate) {
                             console.log('Quote update result:', synchronizationResult.quoteUpdate);
                         } else {
@@ -78,18 +104,40 @@ export default async function handler(req, res) {
 
                     case 'net.authorize.customer.subscription.cancelled':
                         console.log('Calling syncAuthorizeNetSubscriptionCancellation for subscription cancellation webhook...');
+                        // Check if this is a payment plan cancellation
+                        const ppCancellationResult = await handlePaymentPlanCancellation(eventBody);
+                        if (ppCancellationResult && !ppCancellationResult.skipped) {
+                            console.log('Payment plan cancellation handled:', JSON.stringify(ppCancellationResult, null, 2));
+                        }
+                        // Continue with regular subscription cancellation sync
                         synchronizationResult = await syncAuthorizeNetSubscriptionCancellation(eventBody);
+                        if (ppCancellationResult && !ppCancellationResult.skipped) {
+                            synchronizationResult = {
+                                ...synchronizationResult,
+                                paymentPlanCancellation: ppCancellationResult
+                            };
+                        }
                         console.log('Subscription cancellation sync result:', JSON.stringify(synchronizationResult, null, 2));
                         break;
 
                     case 'net.authorize.customer.subscription.suspended':
                         console.log('Subscription suspended:', eventBody.payload);
-                        // Could add suspension sync here if needed
+                        // Check if this is a payment plan suspension
+                        const suspensionResult = await handlePaymentPlanSuspension(eventBody);
+                        if (suspensionResult && !suspensionResult.skipped) {
+                            console.log('Payment plan suspension handled:', JSON.stringify(suspensionResult, null, 2));
+                            synchronizationResult = { paymentPlanSuspension: suspensionResult };
+                        }
                         break;
 
                     case 'net.authorize.customer.subscription.terminated':
                         console.log('Subscription terminated:', eventBody.payload);
-                        // Could add termination sync here if needed
+                        // Check if this is a payment plan termination (treat like cancellation)
+                        const terminationResult = await handlePaymentPlanCancellation(eventBody);
+                        if (terminationResult && !terminationResult.skipped) {
+                            console.log('Payment plan termination handled:', JSON.stringify(terminationResult, null, 2));
+                            synchronizationResult = { paymentPlanTermination: terminationResult };
+                        }
                         break;
 
                     default:

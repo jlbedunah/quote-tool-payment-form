@@ -1,5 +1,14 @@
 import nodeFetch from 'node-fetch';
 import { getAuthorizeNetConfig } from '../lib/authorize-net-env.js';
+import {
+    calculatePaymentPlanAmounts,
+    validatePaymentPlan,
+    createPaymentPlanRecords,
+    markFirstPaymentComplete,
+    getNextMonthDate,
+    getFirstOfNextMonth,
+    getTwoWeeksFromNow
+} from '../lib/payment-plan-utils.js';
 const fetchFn = typeof globalThis.fetch === 'function'
     ? globalThis.fetch.bind(globalThis)
     : nodeFetch;
@@ -85,7 +94,12 @@ export default async function paymentHandler(req, res) {
             billingCity,
             billingState,
             billingZip,
-            billingCountry
+            billingCountry,
+            // Payment plan parameters
+            isPaymentPlan = false,
+            paymentPlanInstallments = null,
+            paymentPlanTotalAmount = null,
+            quoteId = null
         } = req.body;
 
         if (!cardNumber || !expDate || !cardCode ||
@@ -165,6 +179,36 @@ export default async function paymentHandler(req, res) {
         const billCountryValue = billingCountry || country || 'US';
         const combinedBillAddress = [billAddressLine1, billAddressLine2].filter(Boolean).join(' ');
 
+        // Payment plan configuration
+        let paymentPlanConfig = null;
+        if (isPaymentPlan) {
+            const ppTotal = parseFloat(paymentPlanTotalAmount);
+            const ppInstallments = parseInt(paymentPlanInstallments);
+
+            // Validate payment plan
+            const validation = validatePaymentPlan(ppTotal, ppInstallments);
+            if (!validation.valid) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Payment plan validation failed: ${validation.error}`
+                });
+            }
+
+            // Calculate installment amounts
+            const { firstPayment, recurringAmount, totalOccurrences } = calculatePaymentPlanAmounts(ppTotal, ppInstallments);
+
+            paymentPlanConfig = {
+                totalAmount: ppTotal,
+                installments: ppInstallments,
+                firstPayment,
+                recurringAmount,
+                totalOccurrences,
+                quoteId
+            };
+
+            console.log('Payment plan configured:', paymentPlanConfig);
+        }
+
         const builder = new FastXMLBuilder({ ignoreAttributes: false });
 
         const requestedLineItems = Array.isArray(lineItems) ? lineItems : [];
@@ -175,7 +219,11 @@ export default async function paymentHandler(req, res) {
             .filter(item => !item?.isSubscription);
 
         let chargeAmount = 0;
-        if (amount !== undefined && amount !== null && amount !== '') {
+        if (paymentPlanConfig) {
+            // For payment plans, charge the first payment amount
+            chargeAmount = paymentPlanConfig.firstPayment;
+            console.log(`Payment plan: charging first payment of $${chargeAmount.toFixed(2)}`);
+        } else if (amount !== undefined && amount !== null && amount !== '') {
             const parsedAmount = parseFloat(amount);
             if (Number.isFinite(parsedAmount)) {
                 chargeAmount = Number(parsedAmount.toFixed(2));
@@ -398,6 +446,135 @@ export default async function paymentHandler(req, res) {
             transactionMessage = 'Subscription setup only - no one-time charge.';
         }
 
+        // Payment plan ARB subscription creation (for remaining payments)
+        let paymentPlanSubscriptionId = null;
+        let paymentPlanResult = null;
+        if (paymentPlanConfig && transactionSuccess && paymentPlanConfig.totalOccurrences > 0) {
+            try {
+                console.log('Creating payment plan ARB subscription for remaining payments...');
+
+                const quoteNumber = paymentPlanConfig.quoteId || `PP-${Date.now()}`;
+                const ppSubscriptionName = `Payment Plan - ${quoteNumber}`.slice(0, 50);
+                const ppStartDate = getTwoWeeksFromNow();
+
+                const ppSubscription = {
+                    name: ppSubscriptionName,
+                    paymentSchedule: {
+                        interval: {
+                            length: '14',
+                            unit: 'days'
+                        },
+                        startDate: ppStartDate,
+                        totalOccurrences: String(paymentPlanConfig.totalOccurrences),
+                        trialOccurrences: '0'
+                    },
+                    amount: paymentPlanConfig.recurringAmount.toFixed(2),
+                    trialAmount: '0.00',
+                    payment: {
+                        creditCard: {
+                            cardNumber: cardNumber.replace(/\s/g, ''),
+                            expirationDate
+                        }
+                    },
+                    order: {
+                        invoiceNumber: `PP-${quoteNumber}`.slice(0, 20),
+                        description: `Payment plan: ${paymentPlanConfig.installments} installments of $${paymentPlanConfig.recurringAmount.toFixed(2)} (every 2 weeks)`
+                    },
+                    customer: {
+                        ...(customerId ? { id: customerId } : {}),
+                        email
+                    },
+                    billTo: {
+                        firstName: billFirstName,
+                        lastName: billLastName,
+                        company: billCompany,
+                        address: combinedBillAddress,
+                        city: billCity,
+                        state: billState,
+                        zip: billZip,
+                        country: billCountryValue
+                    }
+                };
+
+                const ppSubscriptionPayload = {
+                    ARBCreateSubscriptionRequest: {
+                        '@_xmlns': 'AnetApi/xml/v1/schema/AnetApiSchema.xsd',
+                        merchantAuthentication: { name: loginId, transactionKey },
+                        refId: `pp${Date.now()}`,
+                        subscription: ppSubscription
+                    }
+                };
+
+                const ppSubscriptionXml = builder.build(ppSubscriptionPayload);
+                const ppSubscriptionResponse = await fetchFn(authorizeNetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/xml', 'Accept': 'application/xml' },
+                    body: ppSubscriptionXml
+                });
+
+                const ppSubscriptionResponseText = await ppSubscriptionResponse.text();
+                console.log('Payment plan subscription response status:', ppSubscriptionResponse.status);
+
+                const ppParser = new FastXMLParser({
+                    ignoreAttributes: false,
+                    parseTagValue: true,
+                    parseNodeValue: true,
+                    trimValues: true,
+                    parseTrueNumberOnly: false
+                });
+
+                const ppSubscriptionParsed = ppParser.parse(ppSubscriptionResponseText);
+                const ppMessages = ppSubscriptionParsed?.ARBCreateSubscriptionResponse?.messages;
+                const ppSubId = ppSubscriptionParsed?.ARBCreateSubscriptionResponse?.subscriptionId;
+                const ppResultCode = ppMessages?.resultCode;
+                const ppErrorText = ppMessages?.message?.text ||
+                    (Array.isArray(ppMessages?.message) ? ppMessages.message[0]?.text : null);
+
+                if (ppResultCode === 'Ok' && ppSubId) {
+                    paymentPlanSubscriptionId = String(ppSubId);
+                    paymentPlanResult = {
+                        success: true,
+                        subscriptionId: paymentPlanSubscriptionId,
+                        amount: paymentPlanConfig.recurringAmount.toFixed(2),
+                        totalOccurrences: paymentPlanConfig.totalOccurrences,
+                        startDate: ppStartDate
+                    };
+
+                    console.log(`✅ Payment plan ARB subscription created:`, paymentPlanResult);
+
+                    // Update quote with payment plan details and create payment records
+                    if (paymentPlanConfig.quoteId) {
+                        // Create payment records for tracking
+                        await createPaymentPlanRecords(
+                            paymentPlanConfig.quoteId,
+                            paymentPlanConfig.installments,
+                            paymentPlanConfig.firstPayment,
+                            paymentPlanConfig.recurringAmount
+                        );
+
+                        // Mark first payment as complete and store subscription ID
+                        await markFirstPaymentComplete(
+                            paymentPlanConfig.quoteId,
+                            transactionId,
+                            paymentPlanSubscriptionId
+                        );
+                    }
+                } else {
+                    paymentPlanResult = {
+                        success: false,
+                        error: ppErrorText || 'Payment plan subscription creation failed'
+                    };
+                    console.error('❌ Payment plan subscription failed:', ppErrorText);
+                }
+            } catch (ppError) {
+                console.error('Payment plan subscription error:', ppError);
+                paymentPlanResult = {
+                    success: false,
+                    error: ppError.message || 'Payment plan subscription processing error'
+                };
+            }
+        }
+
         const subscriptionResults = [];
         if (requestedSubscriptionItems.length > 0) {
             if (!hasOneTimeCharge || transactionSuccess) {
@@ -424,7 +601,10 @@ export default async function paymentHandler(req, res) {
                         const intervalRaw = (subItem?.interval || subItem?.subscriptionInterval || 'monthly').toString().toLowerCase();
                         const intervalUnit = intervalRaw.startsWith('day') ? 'days' : 'months';
                         const intervalLength = intervalUnit === 'months' ? 1 : Math.max(1, Number(subItem?.intervalLength) || 1);
-                        const startDate = getValidSubscriptionStartDate(subItem?.startDate || subItem?.subscriptionStartDate);
+                        // Monthly subscriptions start on the 1st of next month; others use requested date
+                        const startDate = intervalUnit === 'months'
+                            ? getFirstOfNextMonth()
+                            : getValidSubscriptionStartDate(subItem?.startDate || subItem?.subscriptionStartDate);
 
                         const subscription = {
                             name: subscriptionName,
@@ -558,7 +738,8 @@ export default async function paymentHandler(req, res) {
         }
 
         const subscriptionSuccess = subscriptionResults.some(result => result.success);
-        const overallSuccess = transactionSuccess || subscriptionSuccess;
+        const paymentPlanSuccess = paymentPlanResult?.success === true;
+        const overallSuccess = transactionSuccess || subscriptionSuccess || (paymentPlanConfig && paymentPlanSuccess);
 
         const responseData = {
             success: overallSuccess,
@@ -570,7 +751,18 @@ export default async function paymentHandler(req, res) {
             environment: isProduction ? 'production' : 'sandbox',
             hasSubscription: requestedSubscriptionItems.length > 0,
             subscriptionMonthlyTotal: subscriptionMonthlyTotal || null,
-            subscriptionResults
+            subscriptionResults,
+            // Payment plan data
+            isPaymentPlan: !!paymentPlanConfig,
+            paymentPlan: paymentPlanConfig ? {
+                totalAmount: paymentPlanConfig.totalAmount,
+                installments: paymentPlanConfig.installments,
+                firstPayment: paymentPlanConfig.firstPayment,
+                recurringAmount: paymentPlanConfig.recurringAmount,
+                subscriptionId: paymentPlanSubscriptionId,
+                subscriptionResult: paymentPlanResult,
+                quoteId: paymentPlanConfig.quoteId
+            } : null
         };
 
         if (transactionDebug) {
@@ -578,9 +770,11 @@ export default async function paymentHandler(req, res) {
         }
 
         if (!overallSuccess) {
-            responseData.error = transactionErrorText || subscriptionResults.find(r => !r.success)?.error || 'Transaction failed';
+            responseData.error = transactionErrorText || subscriptionResults.find(r => !r.success)?.error || paymentPlanResult?.error || 'Transaction failed';
         } else if (subscriptionResults.some(r => !r.success)) {
             responseData.subscriptionWarnings = subscriptionResults.filter(r => !r.success);
+        } else if (paymentPlanResult && !paymentPlanResult.success) {
+            responseData.paymentPlanWarning = paymentPlanResult.error;
         }
 
         // If payment was successful, trigger GHL sync directly (webhook may not fire immediately or may not be configured)
@@ -629,7 +823,9 @@ export default async function paymentHandler(req, res) {
                         },
                         authAmount: chargeAmount.toString(),
                         currencyCode: 'USD'
-                    }
+                    },
+                    // Custom field for quote tracking (not part of Authorize.net payload)
+                    quoteId: quoteId
                 };
 
                 // Trigger sync (non-blocking - don't wait for it to complete)

@@ -5,6 +5,39 @@ import { verifyAuth } from '../lib/auth-middleware.js';
 import { notifyQuoteSent } from '../lib/slack-notifications.js';
 import { randomUUID } from 'crypto';
 
+// Date utility functions for payment schedules
+function formatDateNice(date) {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function formatDateShort(date) {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function getFirstOfNextMonth() {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth() + 1, 1);
+}
+
+function getPaymentPlanDates(installments) {
+  const dates = [new Date()]; // First payment is today
+  let currentDate = new Date();
+  for (let i = 1; i < installments; i++) {
+    currentDate = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() + 14);
+    dates.push(new Date(currentDate));
+  }
+  return dates;
+}
+
 // Check if API key is available
 if (!process.env.RESEND_API_KEY) {
   console.warn('RESEND_API_KEY not found. Email functionality disabled.');
@@ -67,62 +100,17 @@ export default async function handler(req, res) {
 
     // Check if Resend is configured
     if (!resend) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Email service not configured. Please add RESEND_API_KEY environment variable.' 
+      return res.status(500).json({
+        success: false,
+        error: 'Email service not configured. Please add RESEND_API_KEY environment variable.'
       });
     }
 
-    // Generate email content
-    const emailContent = generateEmailContent(quoteData, message);
-
-    // Determine sender and reply-to emails
-    // Use verified domain for 'from' (required by Resend), user's email for 'replyTo' (replies go to user)
-    const verifiedDomain = 'mybookkeepers.com';
-    const defaultFrom = 'quotes@mybookkeepers.com';
-    const defaultReplyTo = 'jason@mybookkeepers.com';
-    
-    // If user is logged in and their email is from the verified domain, use it for 'from'
-    // Otherwise use default 'from' and user's email for 'replyTo'
-    let senderEmail = defaultFrom;
-    let replyToEmail = defaultReplyTo;
-    
-    if (user?.email) {
-      const userEmailDomain = user.email.split('@')[1];
-      if (userEmailDomain === verifiedDomain) {
-        // User's email is from verified domain, can use it as 'from'
-        senderEmail = user.email;
-        replyToEmail = user.email;
-      } else {
-        // User's email is from different domain, use for replyTo only
-        replyToEmail = user.email;
-      }
-    }
-
-    console.log('Sending email:', {
-      from: senderEmail,
-      replyTo: replyToEmail,
-      to: recipientEmail,
-      userEmail: user?.email || 'No user logged in',
-      usingVerifiedDomain: senderEmail.includes(verifiedDomain)
-    });
-
-    // Send email using Resend
-    const data = await resend.emails.send({
-      from: senderEmail,
-      to: [recipientEmail],
-      replyTo: replyToEmail,
-      subject: subject || 'Your Quote Request',
-      html: emailContent,
-    });
-
-    console.log('Email sent successfully:', data);
-
-    // Generate payment link
-    const paymentLink = generatePaymentLink(quoteData);
-
-    // Save quote to database
+    // STEP 1: Save quote to database FIRST to get quoteId
+    // This allows us to include quoteId in the payment link for duplicate detection
     let savedQuote = null;
+    let quoteId = null;
+
     if (supabase) {
       try {
         // Generate quote number using database function
@@ -131,9 +119,18 @@ export default async function handler(req, res) {
 
         const quoteNumber = quoteNumberError ? `Q-${new Date().getFullYear()}-${Date.now()}` : quoteNumberData;
 
+        // Check if this is a payment plan
+        const isPaymentPlan = quoteData.isPaymentPlan === true || quoteData.isPaymentPlan === 'true';
+
+        // Generate a UUID for the quote
+        quoteId = randomUUID();
+
+        // Generate payment link WITH quoteId for proper duplicate detection
+        const paymentLink = generatePaymentLink(quoteData, quoteId);
+
         // Prepare quote data for database
         const quoteToSave = {
-          id: randomUUID(),
+          id: quoteId,
           quote_number: quoteNumber,
           status: 'emailed',
           customer_first_name: quoteData.firstName || '',
@@ -154,11 +151,13 @@ export default async function handler(req, res) {
           },
           delivery_method: 'email',
           payment_link: paymentLink,
-          email_sent_at: new Date().toISOString(),
-          email_recipient: recipientEmail,
-          email_message_id: data.id,
           payment_status: 'pending',
-          created_by_user_id: user?.id || null
+          created_by_user_id: user?.id || null,
+          // Payment plan fields
+          is_payment_plan: isPaymentPlan,
+          payment_plan_total_amount: isPaymentPlan ? parseFloat(quoteData.paymentPlanTotalAmount) : null,
+          payment_plan_installments: isPaymentPlan ? parseInt(quoteData.paymentPlanInstallments) : null,
+          payment_plan_status: isPaymentPlan ? 'pending' : null
         };
 
         const { data: savedQuoteData, error: saveError } = await supabase
@@ -169,13 +168,79 @@ export default async function handler(req, res) {
 
         if (saveError) {
           console.error('Error saving quote to database:', saveError);
+          // Continue anyway - we can still send email without DB record
         } else {
           savedQuote = savedQuoteData;
           console.log('Quote saved to database:', savedQuote.id);
         }
       } catch (saveError) {
         console.error('Error saving quote:', saveError);
-        // Don't fail the email send if quote save fails
+        // Don't fail - continue with email send
+      }
+    }
+
+    // STEP 2: Generate email content WITH quoteId in payment link
+    const emailContent = generateEmailContent(quoteData, message, quoteId);
+
+    // Determine sender and reply-to emails
+    // Use verified domain for 'from' (required by Resend), user's email for 'replyTo' (replies go to user)
+    const verifiedDomain = 'mybookkeepers.com';
+    const defaultFrom = 'quotes@mybookkeepers.com';
+    const defaultReplyTo = 'jason@mybookkeepers.com';
+
+    // If user is logged in and their email is from the verified domain, use it for 'from'
+    // Otherwise use default 'from' and user's email for 'replyTo'
+    let senderEmail = defaultFrom;
+    let replyToEmail = defaultReplyTo;
+
+    if (user?.email) {
+      const userEmailDomain = user.email.split('@')[1];
+      if (userEmailDomain === verifiedDomain) {
+        // User's email is from verified domain, can use it as 'from'
+        senderEmail = user.email;
+        replyToEmail = user.email;
+      } else {
+        // User's email is from different domain, use for replyTo only
+        replyToEmail = user.email;
+      }
+    }
+
+    console.log('Sending email:', {
+      from: senderEmail,
+      replyTo: replyToEmail,
+      to: recipientEmail,
+      userEmail: user?.email || 'No user logged in',
+      usingVerifiedDomain: senderEmail.includes(verifiedDomain)
+    });
+
+    // STEP 3: Send email using Resend
+    const data = await resend.emails.send({
+      from: senderEmail,
+      to: [recipientEmail],
+      replyTo: replyToEmail,
+      subject: subject || 'Your Quote Request',
+      html: emailContent,
+    });
+
+    console.log('Email sent successfully:', data);
+
+    // STEP 4: Update quote with email metadata
+    if (savedQuote && supabase) {
+      try {
+        const { error: updateError } = await supabase
+          .from('quotes')
+          .update({
+            email_sent_at: new Date().toISOString(),
+            email_recipient: recipientEmail,
+            email_message_id: data.id
+          })
+          .eq('id', savedQuote.id);
+
+        if (updateError) {
+          console.error('Error updating quote with email metadata:', updateError);
+        }
+      } catch (updateError) {
+        console.error('Error updating quote:', updateError);
       }
     }
 
@@ -234,7 +299,7 @@ export default async function handler(req, res) {
   }
 }
 
-function generateEmailContent(quoteData, additionalMessage) {
+function generateEmailContent(quoteData, additionalMessage, quoteId = null) {
   const {
     firstName,
     lastName,
@@ -249,11 +314,31 @@ function generateEmailContent(quoteData, additionalMessage) {
     services,
     oneTimeTotal,
     subscriptionMonthlyTotal,
-    grandTotal
+    grandTotal,
+    isPaymentPlan,
+    paymentPlanInstallments,
+    paymentPlanTotalAmount
   } = quoteData;
 
   const parsedOneTimeTotal = Number(parseFloat(oneTimeTotal ?? grandTotal ?? '0') || 0);
   const parsedSubscriptionTotal = Number(parseFloat(subscriptionMonthlyTotal ?? '0') || 0);
+
+  // Calculate payment plan amounts if applicable
+  const isPaymentPlanActive = isPaymentPlan === true || isPaymentPlan === 'true';
+  let firstPaymentAmount = parsedOneTimeTotal;
+  let recurringPaymentAmount = 0;
+  let totalInstallments = 0;
+
+  if (isPaymentPlanActive && paymentPlanInstallments && paymentPlanTotalAmount) {
+    totalInstallments = parseInt(paymentPlanInstallments);
+    const totalAmount = parseFloat(paymentPlanTotalAmount);
+    // Calculate recurring amount (base amount)
+    recurringPaymentAmount = Math.floor((totalAmount * 100) / totalInstallments) / 100;
+    // First payment gets the remainder
+    const sumOfBaseAmounts = recurringPaymentAmount * totalInstallments;
+    const remainder = Math.round((totalAmount - sumOfBaseAmounts) * 100) / 100;
+    firstPaymentAmount = Math.round((recurringPaymentAmount + remainder) * 100) / 100;
+  }
   
   let html = `
     <!DOCTYPE html>
@@ -354,11 +439,38 @@ function generateEmailContent(quoteData, additionalMessage) {
   html += `
                 </tbody>
             </table>
-            
+
+            ${isPaymentPlanActive ? (() => {
+              // Generate payment schedule with specific dates
+              const paymentDates = getPaymentPlanDates(totalInstallments);
+              let paymentScheduleHtml = '';
+              paymentDates.forEach((date, index) => {
+                const amount = index === 0 ? firstPaymentAmount : recurringPaymentAmount;
+                const dateLabel = index === 0 ? 'Today' : formatDateShort(date);
+                paymentScheduleHtml += `<li style="margin: 6px 0;">• ${dateLabel}: <strong>$${amount.toFixed(2)}</strong></li>`;
+              });
+              return `
+            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50;">
+                <h3 style="margin: 0 0 10px 0; color: #2e7d32;">Payment Plan Details</h3>
+                <p style="margin: 0 0 10px 0; font-size: 16px; line-height: 1.8;">
+                    <strong>Total Amount:</strong> $${parseFloat(paymentPlanTotalAmount).toFixed(2)}<br>
+                    <strong>Number of Payments:</strong> ${totalInstallments}
+                </p>
+                <div style="margin-top: 12px;">
+                    <strong style="font-size: 14px; color: #2e7d32;">Payment Schedule:</strong>
+                    <ul style="margin: 8px 0 0 0; padding-left: 0; list-style: none;">${paymentScheduleHtml}</ul>
+                </div>
+            </div>
+            `;
+            })() : ''}
+
             <div class="total-section">
                 <div style="font-size:16px; color:#555; text-align:right;">Due Today</div>
-                <div class="total-amount">$${parsedOneTimeTotal.toFixed(2)}</div>
-                ${parsedSubscriptionTotal > 0 ? `<div style="margin-top:8px; font-size:15px; color:#333; text-align:right;">Monthly Subscription: <strong>$${parsedSubscriptionTotal.toFixed(2)}</strong></div>` : ''}
+                <div class="total-amount">$${isPaymentPlanActive ? firstPaymentAmount.toFixed(2) : parsedOneTimeTotal.toFixed(2)}</div>
+                ${parsedSubscriptionTotal > 0 ? `
+                <div style="margin-top:8px; font-size:15px; color:#333; text-align:right;">Monthly Subscription: <strong>$${parsedSubscriptionTotal.toFixed(2)}</strong></div>
+                <div style="margin-top:4px; font-size:13px; color:#666; text-align:right;">Subscription starts: <strong>${formatDateNice(getFirstOfNextMonth())}</strong></div>
+                ` : ''}
             </div>
             
             ${additionalMessage ? `
@@ -369,7 +481,7 @@ function generateEmailContent(quoteData, additionalMessage) {
             ` : ''}
             
             <div style="text-align: center; margin-top: 30px;">
-                <a href="${generatePaymentLink(quoteData)}" class="cta-button">Proceed to Payment</a>
+                <a href="${generatePaymentLink(quoteData, quoteId)}" class="cta-button">Proceed to Payment</a>
             </div>
             
             <div class="footer">
@@ -384,7 +496,7 @@ function generateEmailContent(quoteData, additionalMessage) {
   return html;
 }
 
-function generatePaymentLink(quoteData) {
+function generatePaymentLink(quoteData, quoteId = null) {
   const {
     firstName,
     lastName,
@@ -399,7 +511,10 @@ function generatePaymentLink(quoteData) {
     services,
     oneTimeTotal,
     subscriptionMonthlyTotal,
-    grandTotal
+    grandTotal,
+    isPaymentPlan,
+    paymentPlanInstallments,
+    paymentPlanTotalAmount
   } = quoteData;
   
   // Detect environment (dev vs production)
@@ -462,7 +577,23 @@ function generatePaymentLink(quoteData) {
       }
     });
   }
-  
+
+  // Add quoteId if provided (for duplicate payment detection)
+  if (quoteId) {
+    params.append('quoteId', quoteId);
+  }
+
+  // Add payment plan parameters if this is a payment plan
+  if (isPaymentPlan === true || isPaymentPlan === 'true') {
+    params.append('isPaymentPlan', 'true');
+    if (paymentPlanInstallments) {
+      params.append('paymentPlanInstallments', paymentPlanInstallments);
+    }
+    if (paymentPlanTotalAmount) {
+      params.append('paymentPlanTotalAmount', paymentPlanTotalAmount);
+    }
+  }
+
   return `${baseUrl}?${params.toString()}`;
 }
 

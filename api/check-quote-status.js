@@ -7,33 +7,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, amount } = req.body;
+    const { email, amount, quoteId } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ 
-        isPaid: false, 
-        error: 'Email is required' 
+    if (!email && !quoteId) {
+      return res.status(400).json({
+        isPaid: false,
+        error: 'Email or quoteId is required'
       });
     }
 
     if (!supabase) {
       // If Supabase not configured, fail open (allow payment)
-      return res.status(200).json({ 
+      return res.status(200).json({
         isPaid: false,
-        message: 'Database not configured' 
+        message: 'Database not configured'
       });
     }
 
     // Normalize email (lowercase, trim)
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = email ? email.toLowerCase().trim() : null;
 
-    // Build query - find paid quotes for this email
-    let query = supabase
+    // Only check for duplicates when quoteId is provided
+    // Without a quoteId, we can't know which specific quote this payment is for,
+    // so we allow the payment (could be a new quote for a returning customer)
+    if (!quoteId) {
+      return res.status(200).json({
+        isPaid: false,
+        message: 'No quoteId provided - allowing payment for new/direct quotes'
+      });
+    }
+
+    // When quoteId is provided, check that specific quote only
+    const query = supabase
       .from('quotes')
       .select('id, quote_number, payment_status, payment_paid_at, payment_transaction_id, payment_amount, created_at')
+      .eq('id', quoteId)
       .eq('payment_status', 'paid')
-      .ilike('customer_email', normalizedEmail)
-      .order('created_at', { ascending: false })
       .limit(1);
 
     // If amount is provided, try to match by amount as well (more precise)

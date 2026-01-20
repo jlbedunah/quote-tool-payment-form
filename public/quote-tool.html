@@ -287,6 +287,60 @@
                 <input type="hidden" id="subscriptionTotalInput" name="subscriptionMonthlyTotal" value="0.00">
             </div>
 
+            <!-- Payment Plan Section -->
+            <div class="p-8 border-b border-gray-200" id="paymentPlanSection">
+                <div class="flex items-center mb-4">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Payment Options</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Payment Type Toggle -->
+                    <div class="flex gap-6">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="paymentType" value="full" checked
+                                   class="form-radio text-red-600 h-5 w-5" onchange="togglePaymentPlan()">
+                            <span class="ml-2 text-gray-700">Full Payment</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="paymentType" value="plan"
+                                   class="form-radio text-indigo-600 h-5 w-5" onchange="togglePaymentPlan()">
+                            <span class="ml-2 text-gray-700">Payment Plan</span>
+                        </label>
+                    </div>
+
+                    <!-- Payment Plan Options (hidden by default) -->
+                    <div id="paymentPlanOptions" class="hidden bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Number of Payments</label>
+                        <select id="paymentPlanInstallments" name="paymentPlanInstallments"
+                                class="w-full md:w-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                onchange="calculatePaymentPlanDisplay()">
+                            <option value="2" selected>2 Payments</option>
+                            <option value="3">3 Payments</option>
+                        </select>
+
+                        <!-- Payment Plan Preview -->
+                        <div id="paymentPlanPreview" class="mt-4 bg-white p-4 rounded-lg border border-indigo-200">
+                            <div class="text-sm text-gray-600 mb-2 font-medium">Payment Schedule:</div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium text-gray-700">Today (Payment 1):</span>
+                                    <span class="font-bold text-indigo-600 text-lg" id="firstPaymentAmount">$0.00</span>
+                                </div>
+                                <div class="flex justify-between items-center text-gray-600">
+                                    <span>Remaining payments:</span>
+                                    <span id="remainingPaymentsText" class="font-medium">1 x $0.00 in 2 weeks</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Action Buttons Section -->
             <div class="p-8 bg-gray-50">
                 <div class="text-center space-y-4">
@@ -651,6 +705,66 @@
                     subscriptionRow.classList.add('hidden');
                 }
             }
+
+            // Update payment plan display if payment plan is selected
+            calculatePaymentPlanDisplay();
+        }
+
+        // Payment Plan Functions
+        function togglePaymentPlan() {
+            const paymentType = document.querySelector('input[name="paymentType"]:checked')?.value;
+            const optionsDiv = document.getElementById('paymentPlanOptions');
+
+            if (paymentType === 'plan') {
+                optionsDiv.classList.remove('hidden');
+                calculatePaymentPlanDisplay();
+            } else {
+                optionsDiv.classList.add('hidden');
+            }
+        }
+
+        function calculatePaymentPlanAmounts(totalAmount, installments) {
+            if (!totalAmount || totalAmount <= 0 || !installments || installments < 2) {
+                return { firstPayment: 0, recurringAmount: 0 };
+            }
+
+            // Calculate base amount (rounded down to cents)
+            const baseAmount = Math.floor((totalAmount * 100) / installments) / 100;
+
+            // Calculate remainder (difference between total and sum of base amounts)
+            const sumOfBaseAmounts = baseAmount * installments;
+            const remainder = Math.round((totalAmount - sumOfBaseAmounts) * 100) / 100;
+
+            // First payment gets the extra cents
+            const firstPayment = Math.round((baseAmount + remainder) * 100) / 100;
+
+            return { firstPayment, recurringAmount: baseAmount };
+        }
+
+        function calculatePaymentPlanDisplay() {
+            const paymentType = document.querySelector('input[name="paymentType"]:checked')?.value;
+            if (paymentType !== 'plan') return;
+
+            const oneTimeTotalText = document.getElementById('oneTimeTotal')?.textContent || '0';
+            const totalAmount = parseFloat(oneTimeTotalText) || 0;
+            const installments = parseInt(document.getElementById('paymentPlanInstallments')?.value) || 3;
+
+            const { firstPayment, recurringAmount } = calculatePaymentPlanAmounts(totalAmount, installments);
+
+            const firstPaymentEl = document.getElementById('firstPaymentAmount');
+            const remainingEl = document.getElementById('remainingPaymentsText');
+
+            if (firstPaymentEl) {
+                firstPaymentEl.textContent = `$${firstPayment.toFixed(2)}`;
+            }
+            if (remainingEl) {
+                const remaining = installments - 1;
+                if (remaining === 1) {
+                    remainingEl.textContent = `$${recurringAmount.toFixed(2)} in 2 weeks`;
+                } else {
+                    remainingEl.textContent = `${remaining} x $${recurringAmount.toFixed(2)} (every 2 weeks)`;
+                }
+            }
         }
 
         async function buildLink() {
@@ -717,7 +831,22 @@
             quoteData.oneTimeTotal = document.getElementById('oneTimeTotal')?.textContent || '0.00';
             quoteData.subscriptionMonthlyTotal = document.getElementById('subscriptionTotal')?.textContent || '0.00';
             quoteData.grandTotal = document.getElementById('grandTotal')?.textContent || '0.00';
-            
+
+            // Add payment plan data if selected
+            const paymentType = document.querySelector('input[name="paymentType"]:checked')?.value;
+            if (paymentType === 'plan') {
+                const oneTimeTotal = parseFloat(quoteData.oneTimeTotal) || 0;
+                const installments = parseInt(document.getElementById('paymentPlanInstallments')?.value) || 3;
+
+                params.append('isPaymentPlan', 'true');
+                params.append('paymentPlanInstallments', installments);
+                params.append('paymentPlanTotalAmount', oneTimeTotal.toFixed(2));
+
+                quoteData.isPaymentPlan = true;
+                quoteData.paymentPlanInstallments = installments;
+                quoteData.paymentPlanTotalAmount = oneTimeTotal;
+            }
+
             // Generate the URL - ensure it points to payment-form-robust.html
             let baseUrl;
             if (window.location.pathname.includes('quote-tool.html')) {
